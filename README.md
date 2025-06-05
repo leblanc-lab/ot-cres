@@ -1,2 +1,5 @@
 # cres-distance
-Cell Reweighting Project
+# Cell Reweighting Project
+
+Here contain all scripts for running cell reweighting code
+
