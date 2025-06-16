@@ -19,6 +19,7 @@ parser.add_argument("--max_radius", type = float, required = True, help = "Max c
 parser.add_argument("--weight_filepath", type=str, required=True, help="Path to the hepmc file of weights")
 parser.add_argument("--numbins", type = int, required = True, help = "Number of bins in histogram")
 parser.add_argument("--N", type = int, required = True, help = "Number of events to look at")
+parser.add_argument("--output_filepath", type = str, required = True, help = "Output path for plots")
 
 args = parser.parse_args()
 N = args.N
@@ -240,23 +241,24 @@ print(1 - len(np.where(hadronization_event_weight < 0)[0]) / len(neg_events), f'
 
 #Plot cell radii histograms
 numbins = args.numbins
+output_filepath = args.output_filepath
 
 plt.figure()
 plt.hist(hardprocess_cell_radius, bins = numbins, histtype = 'step');
 plt.xlabel('Cell Radius (GeV)');
 plt.title('Histogram of Cell Radii (Hard Process)');
-plt.savefig("hardprocess_cellradius_histogram.png")
+plt.savefig(f"{output_filepath}/hardprocess_cellradius_histogram.png")
 
 plt.figure()
 plt.hist(showered_cell_radius, bins = numbins, histtype = 'step');
 plt.xlabel('Cell Radius (GeV)');
 plt.title('Histogram of Cell Radii (Showered)');
-plt.savefig("showered_cellradius_histogram.png")
+plt.savefig(f"{output_filepath}/showered_cellradius_histogram.png")
 
 plt.figure()
 plt.hist(hadronization_cell_radius, bins = numbins, histtype = 'step');
 plt.xlabel('Cell Radius (GeV)');
 plt.title('Histogram of Cell Radii (Hadronized)');
-plt.savefig("hadronization_cellradius_histogram.png")
+plt.savefig(f"{output_filepath}/hadronization_cellradius_histogram.png")
 
 print('All histograms generated and saved')
