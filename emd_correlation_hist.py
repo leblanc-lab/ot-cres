@@ -46,6 +46,14 @@ plt.xlabel(args.label1)
 plt.ylabel(args.label2)
 plt.title('EMD Correlation Histogram')
 
+
+plt.xlim((0,np.max([dist2neg_flat, dist2neg2_flat])))
+plt.ylim((0,np.max([dist2neg_flat, dist2neg2_flat])))
+
+line_pts = np.linspace(0,np.max([dist2neg_flat, dist2neg2_flat]), 100)
+plt.plot(line_pts, line_pts, 'r--', linewidth=3)
+
+
 print('Plotting complete!')
 
 plt.savefig(f"{args.output_path}/EMD_corr_hist2d.png")
