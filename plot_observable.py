@@ -905,7 +905,7 @@ if obs == 'z_ljet_delta_eta':
 
     for i in range(N):
         l_jet_eta[i] = np.arctanh(l_jet[i]['pz']/l_jet[i]['E'])
-        z_eta = np.arctanh((data[i]['Particle_pz'][np.where(data[i]['Particle_status'] == 22)[0]]/data[i]['Particle_energy'][np.where(data[i]['Particle_status'] == 22)[0]])) 
+        z_eta[i] = np.arctanh((data[i]['Particle_pz'][np.where(data[i]['Particle_status'] == 22)[0]]/data[i]['Particle_energy'][np.where(data[i]['Particle_status'] == 22)[0]])) 
     
     z_eta = z_eta[:,0]
 
@@ -928,7 +928,7 @@ if obs == 'z_sljet_delta_eta':
 
     for i in range(N):
         sl_jet_eta[i] = np.arctanh(sl_jet[i]['pz']/sl_jet[i]['E'])
-        z_eta = np.arctanh((data[i]['Particle_pz'][np.where(data[i]['Particle_status'] == 22)[0]]/data[i]['Particle_energy'][np.where(data[i]['Particle_status'] == 22)[0]])) 
+        z_eta[i] = np.arctanh((data[i]['Particle_pz'][np.where(data[i]['Particle_status'] == 22)[0]]/data[i]['Particle_energy'][np.where(data[i]['Particle_status'] == 22)[0]])) 
     
     z_eta = z_eta[:,0]
 
