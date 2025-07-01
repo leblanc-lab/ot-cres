@@ -58,6 +58,10 @@ if args.distmatrix3 is not None:
         dist2neg3_flat.extend(right_values.tolist())      # add to result list 
     print('Third distance matrix preprocessed!')
 
+#bin size if no xmin or xmax and only 1 distance matrix
+if args.distmatrix2 is None and args.distmatrix3 is None:
+   bins = np.linspace(np.min(dist2neg_flat), np.max(dist2neg_flat), args.numbins)
+
 #bin size if xmin and xmax are not given
 if args.distmatrix2 is not None or args.distmatrix3 is not None:
     all_matrices = [dist2neg_flat]
