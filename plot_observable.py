@@ -842,7 +842,7 @@ if obs == 'z_ljet_delta_phi':
 
     z_phi = z_phi[:,0]
 
-    observable = abs(zphi - l_jet_phi)
+    observable = abs(z_phi - l_jet_phi)
 
     big_ljet_phi = big_observable[:,2]
     big_filepath2 = args.big_obs_filepath2
@@ -865,7 +865,7 @@ if obs == 'z_sljet_delta_phi':
 
     z_phi = z_phi[:,0]
 
-    observable = abs(zphi - sl_jet_phi)
+    observable = abs(z_phi - sl_jet_phi)
 
     big_sljet_phi = big_observable[:,2]
     big_filepath2 = args.big_obs_filepath2
