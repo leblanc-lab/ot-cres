@@ -18,3 +18,7 @@ script will do the reweighting and will return the new weights and some useful p
 
 Using 100k_cell_reweighting.py can be slow depending on the chosen radius. Therefore its recommended to submit the job to SLURM using reweight_100k.sh. You'll have to 
 change the job name, memory per node, time limit, and standard output/error log paths. Then run the python script with whatever inputs you want. 
+
+# 3. Plotting Observables
+
+When the reweighting is done and you have the reweighted distance matrices, you can plot them with the plot_observables script. You will have to change the paths leading to all the observables and reweighted arrays. With this script, you can make observables two ways. The first is with the 10M sample as reference and the other with the original 100k sample as reference. 
