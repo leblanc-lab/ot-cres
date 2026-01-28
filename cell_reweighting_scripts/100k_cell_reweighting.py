@@ -15,9 +15,12 @@ parser = argparse.ArgumentParser()
 
 
 parser.add_argument("--vptree", type=str, required = True, help = "Path to vptree")
+parser.add_argument("--points", type=str, required = True, help = "Path to points file")
+parser.add_argument("--weights", type=str, required = True, help = "Path to weights file")
 parser.add_argument("--path", type=str, required = True, help = "Output filepath")
 parser.add_argument("--max_radius", type = float, required = True, help = "Max radius")
 parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
+parser.add_argument("--niter", type = int, default=100000, help = "Max number of iterations (i.e. events). Must match vptree.")
 
 args = parser.parse_args()
 
@@ -78,15 +81,16 @@ with open(vptree_filepath, "rb") as f:
 max_radius = args.max_radius
 output_filepath = args.path
 whattype = args.whattype
+point_filepath = args.points
+weight_filepath = args.weights
 
 #check number of cores
 num_cores = os.cpu_count()
 print(f"Number of CPU cores: {num_cores}")
 
-
 if whattype == 0:
-    points = np.load('/oscar/data/mleblan6/ppzjj_100k/hardprocess_points.npy')
-    event_weight = np.load('/oscar/data/mleblan6/ppzjj_100k/weight_100k.npy') * 1.455 * 10**4
+    points = np.load(point_filepath)
+    event_weight = np.load(weight_filepath) * 1.455 * 10**4
 
     mask = np.where(np.all(points == 0, axis=(1, 2)))[0]
     points = np.delete(points, mask, axis = 0)
@@ -94,35 +98,29 @@ if whattype == 0:
 
     N = len(event_weight)
     
-elif whattype == 1: 
-    points = np.load('/oscar/data/mleblan6/ppzjj_100k/showered_points.npy')
+else:
+    points = np.load(point_filepath)
     N = 100000 #number of events
-    event_weight = np.load('/oscar/data/mleblan6/ppzjj_100k/weight_100k.npy') * 1.455 * 10**4
-    
-elif whattype == 2:
-    points = np.load('/oscar/data/mleblan6/ppzjj_100k/hadronization_points.npy')
-    N = 100000 #number of events
-    event_weight = np.load('/oscar/data/mleblan6/ppzjj_100k/weight_100k.npy') * 1.455 * 10**4
-
+    event_weight = np.load(weight_filepath) * 1.455 * 10**4
 
 neg_events = np.where(event_weight < 0)[0]
-
 Tree = None
 
 def init_worker(tree_path):
     global Tree
     with open(tree_path, 'rb') as f:
         Tree = pickle.load(f)
-
 def parallel_query(i, points, R, truth_points):
     if i % 1000 == 0:
         print(i)
+        # print(R)
+        # print("VPtree obj ", Tree)
+        # print("Points ", points [i])
+        # print("vptree neighbors ", Tree.get_all_in_range(points[i], R))
     try:
         query = points[i]
-    
         sorted_neighbors = sorted(Tree.get_all_in_range(query, R), key=lambda x: x[0])
         kinematics = [row[1] for row in sorted_neighbors]
-    
         prox_array = []
     
         prox_array = [np.where(np.all(np.abs(truth_points - kin[0, :]) <= 0.001, axis=1))[0] for kin in kinematics]
@@ -137,16 +135,18 @@ def parallel_query(i, points, R, truth_points):
 truth_points = points[:,0,:]
 
 num_processes = 180
+print("about to link vptree to weights ")
 with mp.Pool(processes=num_processes, initializer=init_worker, initargs=(vptree_filepath,)) as pool:
     results = pool.starmap(parallel_query, [(i, points, max_radius, truth_points) for i in neg_events])
-
+print("success")
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 new_weight = np.copy(event_weight)
 event_num = []
 cell_pop = []
 neg_cell_pop = []
 cell_radius = []
-
+print("Copy weights obj")
+# print("vp tree results", results)
 for i in range(N):
             
     if new_weight[i] < 0:
@@ -156,7 +156,7 @@ for i in range(N):
         max_cell = new_weight[cell_idx]
         cell_weight = 0
         abs_cell_weight = 0
-
+        print(max_cell)
         cumsum = np.cumsum(max_cell)
 
         # Find the first index where cumulative sum becomes positive
@@ -178,12 +178,11 @@ for i in range(N):
         if cell_weight <= 0:
             continue
 
-        #print(i, cell_idx)
+        print(i, cell_idx)
         if num_elements > 1:
             cell_pop.append(num_elements)
             cell_radius.append(compute_emds(points[i], points[cell_idx[idx]]))
-            neg_cell_pop.append(1+len(max_cell[0:idx][max_cell[0:idx] < 0]))
-            
+            neg_cell_pop.append(1+len(max_cell[0:idx][max_cell[0:idx] < 0]))   
         new_weight[cell_idx[0:j+1]] = np.sum(cell_weight) / np.sum(abs_cell_weight) * np.abs(max_cell[0:j+1])
 
     if i % 10000 == 0:
@@ -204,13 +203,13 @@ plt.yscale('log')
 plt.xlabel('Radius [GeV]')
 plt.ylabel('Frequency');
 if whattype == 2:
-	plt.title('Hadronization Reweight Cell Radius')
+    plt.title('Hadronization Reweight Cell Radius')
     plt.savefig(f'cell_radius_had_{int(max_radius)}gev.png')
 elif whattype == 1:
-	plt.title('Showered Reweight Cell Radius')
+    plt.title('Showered Reweight Cell Radius')
     plt.savefig(f'cell_radius_sho_{int(max_radius)}gev.png')
 elif whattype == 0:
-	plt.title('Hard Process Cell Radius')
+    plt.title('Hard Process Cell Radius')
     plt.savefig(f'cell_radius_hp_{int(max_radius)}gev.png')
 
 
@@ -234,11 +233,11 @@ plt.yscale('log')
 plt.title(f'Number of Negative Events in Cell (R = {max_radius} GeV)')
 plt.xlabel('#')
 plt.ylabel('Frequency');
-plt.savefig(f'neg_cell_pop_{whattype}_{max_radius}gev.png')
+plt.savefig(f'../plots/neg_cell_pop_{whattype}_{max_radius}gev.png')
 if whattype == 2:
-    plt.savefig(f'neg_cell_pop_had_{int(max_radius)}gev.png')
+    plt.savefig(f'../plots/neg_cell_pop_had_{int(max_radius)}gev.png')
 elif whattype == 1:
-    plt.savefig(f'neg_cell_pop_sho_{int(max_radius)}gev.png')
+    plt.savefig(f'../plots/neg_cell_pop_sho_{int(max_radius)}gev.png')
 elif whattype == 0:
-    plt.savefig(f'neg_cell_pop_hp_{int(max_radius)}gev.png')
+    plt.savefig(f'../plots/neg_cell_pop_hp_{int(max_radius)}gev.png')
 

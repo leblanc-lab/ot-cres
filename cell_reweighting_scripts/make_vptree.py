@@ -16,20 +16,22 @@ print(f"Number of CPU cores: {num_cores}")
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--path", type=str, required = True, help = "Output filepath. WARNING THIS HAS TO END IN .pkl FORMAT")
-parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
+parser.add_argument("--point_path", type=str, required = True, help = "Input file of points (had, parton shower, or hard process .npy file)")
+parser.add_argument("--niter", type=int, default=100000, help = "Max number of iterations -- number of events")
+# parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
 
 args = parser.parse_args()
 
-whattype = args.whattype
+# whattype = args.whattype
 outpath = args.path
-
-
+niter_max = args.niter
+print("Got args")
 #parameters of EMD calculation
 max_dist = np.sqrt(9.8**2 + (2*np.pi)**2)
-
+print("define max dist ", max_dist)
 calc_emds = wasserstein.EMDYPhi(R=max_dist, 
                                         beta=1,
-                                        norm=True,
+                                        norm=False,
                                         #num_threads=-1,
                                         #print_every=1000,
                                         #verbose=0,
@@ -37,7 +39,7 @@ calc_emds = wasserstein.EMDYPhi(R=max_dist,
                                         #store_sym_emds_raw=True,
                                         #throw_on_error=False,
                                         # omp_dynamic_chunksize=10,
-                                        n_iter_max=100000,
+                                        n_iter_max=niter_max,
                                         #epsilon_large_factor=1000.0,
                                         #epsilon_small_factor=1.0,
                                         dtype='float64')
@@ -63,17 +65,15 @@ def compute_emds(points1, points2):
         pts2[-1] += 1e-5
         return calc_emds(pts1, etaphi1, pts2, etaphi2)
 
+print("Computed emds")
 
-if whattype == 0:
-    points = np.load('/oscar/data/mleblan6/rjain/ppzjj_100k/hardprocess_points.npy')
-elif whattype == 1:
-    points = np.load('/oscar/data/mleblan6/rjain/ppzjj_100k/showered_points.npy')
-elif whattype == 2:
-    points = np.load('/oscar/data/mleblan6/rjain/ppzjj_100k/hadronization_points.npy')
+points = np.load(args.point_path)
 
-N = 100000
+print("Loaded points -- next make vptree")
 
 tree = vptree.VPTree(points, compute_emds)
+
+print("Made vptree -- saving now")
 
 with open(outpath, "wb") as f:
     pickle.dump(tree, f)
