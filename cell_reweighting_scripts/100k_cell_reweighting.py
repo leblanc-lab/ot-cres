@@ -45,12 +45,26 @@ calc_emds = wasserstein.EMDYPhi(R=max_dist,
 
 
 def compute_emds(points1, points2):
-    pts1 = points1[:,0]
-    pts2 = points2[:,0]
-    etaphi1 = points1[:,1:3]
-    etaphi2 = points2[:,1:3]
+    pts1 = points1[:, 0]
+    pts2 = points2[:, 0]
 
-    return calc_emds(pts1, etaphi1, pts2, etaphi2)
+    etaphi1 = points1[:, 1:3]
+    etaphi2 = points2[:, 1:3]
+
+    if np.all(pts1 == 0):
+        pts1[0] += 1e-5
+
+    if np.all(pts2 == 0):
+        pts2[0] += 1e-5
+
+    try: 
+        return calc_emds(pts1, etaphi1, pts2, etaphi2)
+
+    except RuntimeError: #sometimes the EMD optimization fails to converge 
+
+        pts1[-1] += 1e-5
+        pts2[-1] += 1e-5
+        return calc_emds(pts1, etaphi1, pts2, etaphi2)
 
 # #----------------------------------------------------------------------------------------------------------------------------------
 #load in distance matrices and remove repeated distances and zeros
