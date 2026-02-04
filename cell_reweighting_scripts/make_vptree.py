@@ -55,7 +55,13 @@ def compute_emds(points1, points2):
     if np.all(pts2 == 0):
         pts2[0] += 1e-5
 
-    return calc_emds(pts1, etaphi1, pts2, etaphi2)
+    try: 
+        return calc_emds(pts1, etaphi1, pts2, etaphi2)
+
+    except RuntimeError: #sometimes the EMD optimization fails to converge 
+        pts1[-1] += 1e-5
+        pts2[-1] += 1e-5
+        return calc_emds(pts1, etaphi1, pts2, etaphi2)
 
 
 if whattype == 0:
