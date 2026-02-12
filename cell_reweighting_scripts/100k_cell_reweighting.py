@@ -8,6 +8,7 @@ import argparse
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import warnings
+import time
 
 #import arguments
 
@@ -20,7 +21,7 @@ parser.add_argument("--weights", type=str, required = True, help = "Path to weig
 parser.add_argument("--path", type=str, required = True, help = "Output filepath")
 parser.add_argument("--max_radius", type = float, required = True, help = "Max radius")
 parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
-parser.add_argument("--niter", type = int, default=100000, help = "Max number of iterations (i.e. events). Must match vptree.")
+# parser.add_argument("--niter", type = int, default=100000, help = "Max number of iterations (i.e. events). Must match vptree.")
 
 args = parser.parse_args()
 
@@ -90,19 +91,21 @@ print(f"Number of CPU cores: {num_cores}")
 
 if whattype == 0:
     points = np.load(point_filepath)
+    N = len(points)
     event_weight = np.load(weight_filepath) * 1.455 * 10**4
+    event_weight = event_weight[:N]
 
     mask = np.where(np.all(points == 0, axis=(1, 2)))[0]
     points = np.delete(points, mask, axis = 0)
     event_weight = np.delete(event_weight, mask, axis = 0)
 
-    N = len(event_weight)
+    
     
 else:
     points = np.load(point_filepath)
-    N = 100000 #number of events
+    N = len(points) #number of events
     event_weight = np.load(weight_filepath) * 1.455 * 10**4
-
+    event_weight = event_weight[:N]
 neg_events = np.where(event_weight < 0)[0]
 Tree = None
 
@@ -113,10 +116,6 @@ def init_worker(tree_path):
 def parallel_query(i, points, R, truth_points):
     if i % 1000 == 0:
         print(i)
-        # print(R)
-        # print("VPtree obj ", Tree)
-        # print("Points ", points [i])
-        # print("vptree neighbors ", Tree.get_all_in_range(points[i], R))
     try:
         query = points[i]
         sorted_neighbors = sorted(Tree.get_all_in_range(query, R), key=lambda x: x[0])
@@ -136,9 +135,15 @@ truth_points = points[:,0,:]
 
 num_processes = 180
 print("about to link vptree to weights ")
+
+start_pc = time.perf_counter()
+start_pt = time.process_time()
 with mp.Pool(processes=num_processes, initializer=init_worker, initargs=(vptree_filepath,)) as pool:
     results = pool.starmap(parallel_query, [(i, points, max_radius, truth_points) for i in neg_events])
 print("success")
+pc = time.perf_counter()-start_pc
+pt = time.process_time() - start_pt
+print("time taken to link vptree: ", pc ," (perf count) ", pt ," (proc time)") 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 new_weight = np.copy(event_weight)
 event_num = []
@@ -146,7 +151,9 @@ cell_pop = []
 neg_cell_pop = []
 cell_radius = []
 print("Copy weights obj")
-# print("vp tree results", results)
+print("Performing rw")
+start_pc = time.perf_counter()
+start_pt = time.process_time()
 for i in range(N):
             
     if new_weight[i] < 0:
@@ -156,7 +163,7 @@ for i in range(N):
         max_cell = new_weight[cell_idx]
         cell_weight = 0
         abs_cell_weight = 0
-        print(max_cell)
+        # print(max_cell)
         cumsum = np.cumsum(max_cell)
 
         # Find the first index where cumulative sum becomes positive
@@ -178,7 +185,7 @@ for i in range(N):
         if cell_weight <= 0:
             continue
 
-        print(i, cell_idx)
+        # print(i, cell_idx)
         if num_elements > 1:
             cell_pop.append(num_elements)
             cell_radius.append(compute_emds(points[i], points[cell_idx[idx]]))
@@ -187,7 +194,9 @@ for i in range(N):
 
     if i % 10000 == 0:
         print(f'{i}')
-
+pc = time.perf_counter()-start_pc
+pt = time.process_time() - start_pt
+print("time taken to reweight ", pc ," (perf count) ", pt ," (proc time)") 
 if np.abs(new_weight.sum() - event_weight.sum()) < 0.1:
     print('Sum of weights agree', new_weight.sum(), event_weight.sum())
 else:

@@ -17,14 +17,12 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--path", type=str, required = True, help = "Output filepath. WARNING THIS HAS TO END IN .pkl FORMAT")
 parser.add_argument("--point_path", type=str, required = True, help = "Input file of points (had, parton shower, or hard process .npy file)")
-parser.add_argument("--niter", type=int, default=100000, help = "Max number of iterations -- number of events")
 # parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
 
 args = parser.parse_args()
 
 # whattype = args.whattype
 outpath = args.path
-niter_max = args.niter
 print("Got args")
 #parameters of EMD calculation
 max_dist = np.sqrt(9.8**2 + (2*np.pi)**2)
@@ -39,7 +37,7 @@ calc_emds = wasserstein.EMDYPhi(R=max_dist,
                                         #store_sym_emds_raw=True,
                                         #throw_on_error=False,
                                         # omp_dynamic_chunksize=10,
-                                        n_iter_max=niter_max,
+                                        n_iter_max=100000,
                                         #epsilon_large_factor=1000.0,
                                         #epsilon_small_factor=1.0,
                                         dtype='float64')
