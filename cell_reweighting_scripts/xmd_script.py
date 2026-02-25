@@ -16,7 +16,7 @@ distmatrix /= np.max(distmatrix)
 print(f'Full distance matrix loaded and normalized! Maximum is {np.max(distmatrix)}!')
 
 def xmd_distance(q, w1_pos, w2_pos, pos_distmatrix):  
-    #remove all positive events that are unaffected by reweighting
+    #remove all events that are unaffected by reweighting
     mask0 = w1_pos != w2_pos
 
     w1_pos = w1_pos[mask0]
