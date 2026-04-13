@@ -1,4 +1,3 @@
-#import useful stuff
 import pickle 
 import numpy as np
 import uproot
@@ -21,10 +20,11 @@ parser.add_argument("--weights", type=str, required = True, help = "Path to weig
 parser.add_argument("--path", type=str, required = True, help = "Output filepath")
 parser.add_argument("--max_radius", type = float, required = True, help = "Max radius")
 parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
+parser.add_argument("--beta", type=float, required=False, default=1, help = "Beta value for calculation of EMD; default is 1")
 # parser.add_argument("--niter", type = int, default=100000, help = "Max number of iterations (i.e. events). Must match vptree.")
 
 args = parser.parse_args()
-
+beta = args.beta
 
 
 print('Starting data preprocessing...')
@@ -33,7 +33,7 @@ print('Starting data preprocessing...')
 #parameters of EMD calculation
 max_dist = np.sqrt(9.8**2 + (2*np.pi)**2)
 calc_emds = wasserstein.EMDYPhi(R=max_dist, 
-                                        beta=1,
+                                        beta=beta,
                                         norm=False,
                                         #num_threads=-1,
                                         #print_every=1000,
@@ -47,28 +47,55 @@ calc_emds = wasserstein.EMDYPhi(R=max_dist,
                                         #epsilon_small_factor=1.0,
                                         dtype='float64')
 
-
-def compute_emds(points1, points2):
-    pts1 = points1[:, 0]
-    pts2 = points2[:, 0]
-
-    etaphi1 = points1[:, 1:3]
-    etaphi2 = points2[:, 1:3]
-
-    if np.all(pts1 == 0):
-        pts1[0] += 1e-5
-
-    if np.all(pts2 == 0):
-        pts2[0] += 1e-5
-
-    try: 
-        return calc_emds(pts1, etaphi1, pts2, etaphi2)
-
-    except RuntimeError: #sometimes the EMD optimization fails to converge 
-
-        pts1[-1] += 1e-5
-        pts2[-1] += 1e-5
-        return calc_emds(pts1, etaphi1, pts2, etaphi2)
+if beta <= 1:
+    def compute_emds(points1, points2):
+        pts1 = points1[:, 0]
+        pts2 = points2[:, 0]
+    
+        etaphi1 = points1[:, 1:3]
+        etaphi2 = points2[:, 1:3]
+    
+        if np.all(pts1 == 0):
+            pts1[0] += 1e-5
+    
+        if np.all(pts2 == 0):
+            pts2[0] += 1e-5
+    
+        try: 
+            return calc_emds(pts1, etaphi1, pts2, etaphi2)
+    
+        except RuntimeError: #sometimes the EMD optimization fails to converge 
+    
+            pts1[-1] += 1e-5
+            pts2[-1] += 1e-5
+            return calc_emds(pts1, etaphi1, pts2, etaphi2)
+elif beta > 1.0:
+    def compute_emds(points1, points2):
+        pts1 = points1[:, 0]
+        pts2 = points2[:, 0]
+    
+        ht1 = pts1.sum()
+        ht2 = pts2.sum()
+    
+        dE = np.abs(ht1 - ht2)
+    
+        etaphi1 = points1[:, 1:3]
+        etaphi2 = points2[:, 1:3]
+    
+        if np.all(pts1 == 0):
+            pts1[0] += 1e-5
+    
+        if np.all(pts2 == 0):
+            pts2[0] += 1e-5
+    
+        try:
+            return (calc_emds(pts1, etaphi1, pts2, etaphi2) - dE)**(1.0/beta) + dE
+    
+        except Exception as e:
+            etaphi1[0,0] += 1e-5
+            etaphi2[0,0] += 1e-5
+            
+            return (calc_emds(pts1, etaphi1, pts2, etaphi2) -dE)**(1.0/beta) + dE
 
 # #----------------------------------------------------------------------------------------------------------------------------------
 #load in distance matrices and remove repeated distances and zeros
@@ -91,20 +118,20 @@ print(f"Number of CPU cores: {num_cores}")
 
 if whattype == 0:
     points = np.load(point_filepath)
-    N = len(points)
-    event_weight = np.load(weight_filepath) * 1.455 * 10**4
-    event_weight = event_weight[:N]
-
+    event_weight = np.load(weight_filepath)
+    
     mask = np.where(np.all(points == 0, axis=(1, 2)))[0]
     points = np.delete(points, mask, axis = 0)
     event_weight = np.delete(event_weight, mask, axis = 0)
+
+    N = len(event_weight)
 
     
     
 else:
     points = np.load(point_filepath)
-    N = len(points) #number of events
-    event_weight = np.load(weight_filepath) * 1.455 * 10**4
+    N = 100000 #number of events
+    event_weight = np.load(weight_filepath)
     event_weight = event_weight[:N]
 neg_events = np.where(event_weight < 0)[0]
 Tree = None
@@ -113,6 +140,7 @@ def init_worker(tree_path):
     global Tree
     with open(tree_path, 'rb') as f:
         Tree = pickle.load(f)
+        
 def parallel_query(i, points, R, truth_points):
     if i % 1000 == 0:
         print(i)
@@ -121,9 +149,7 @@ def parallel_query(i, points, R, truth_points):
         sorted_neighbors = sorted(Tree.get_all_in_range(query, R), key=lambda x: x[0])
         kinematics = [row[1] for row in sorted_neighbors]
         prox_array = []
-    
         prox_array = [np.where(np.all(np.abs(truth_points - kin[0, :]) <= 0.001, axis=1))[0] for kin in kinematics]
-
         return prox_array
 
     except RuntimeError as e:
@@ -154,16 +180,19 @@ print("Copy weights obj")
 print("Performing rw")
 start_pc = time.perf_counter()
 start_pt = time.process_time()
+print("N events ", N)
+print("Length of weights ", len(new_weight))
 for i in range(N):
             
     if new_weight[i] < 0:
 
 
         cell_idx = [x[0] for x in results[np.where(neg_events == i)[0][0]] if len(x) > 0]
+        print("Cells with negative weights ", cell_idx)
         max_cell = new_weight[cell_idx]
         cell_weight = 0
         abs_cell_weight = 0
-        # print(max_cell)
+
         cumsum = np.cumsum(max_cell)
 
         # Find the first index where cumulative sum becomes positive
@@ -185,11 +214,12 @@ for i in range(N):
         if cell_weight <= 0:
             continue
 
-        # print(i, cell_idx)
+        #print(i, cell_idx)
         if num_elements > 1:
             cell_pop.append(num_elements)
             cell_radius.append(compute_emds(points[i], points[cell_idx[idx]]))
-            neg_cell_pop.append(1+len(max_cell[0:idx][max_cell[0:idx] < 0]))   
+            neg_cell_pop.append(1+len(max_cell[0:idx][max_cell[0:idx] < 0]))
+            
         new_weight[cell_idx[0:j+1]] = np.sum(cell_weight) / np.sum(abs_cell_weight) * np.abs(max_cell[0:j+1])
 
     if i % 10000 == 0:

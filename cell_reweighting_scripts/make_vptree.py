@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--path", type=str, required = True, help = "Output filepath. WARNING THIS HAS TO END IN .pkl FORMAT")
 parser.add_argument("--point_path", type=str, required = True, help = "Input file of points (had, parton shower, or hard process .npy file)")
+parser.add_argument("--beta", type=float, required=False, default=1, help = "Beta value for calculation of EMD; default is 1")
 # parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
 
 args = parser.parse_args()
@@ -28,7 +29,7 @@ print("Got args")
 max_dist = np.sqrt(9.8**2 + (2*np.pi)**2)
 print("define max dist ", max_dist)
 calc_emds = wasserstein.EMDYPhi(R=max_dist, 
-                                        beta=1,
+                                        beta=args.beta,
                                         norm=False,
                                         #num_threads=-1,
                                         #print_every=1000,
