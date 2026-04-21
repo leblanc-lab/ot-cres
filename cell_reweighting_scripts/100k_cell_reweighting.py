@@ -26,7 +26,8 @@ parser.add_argument("--beta", type=float, required=False, default=1, help = "Bet
 args = parser.parse_args()
 beta = args.beta
 
-
+total_pc = time.perf_counter()
+total_pt = time.process_time()
 print('Starting data preprocessing...')
 # #-----------------------------------------------------------------------------------------------------------------------------------------------------------
 #compute EMDs 
@@ -111,6 +112,7 @@ output_filepath = args.path
 whattype = args.whattype
 point_filepath = args.points
 weight_filepath = args.weights
+print("Max radius ", max_radius," beta ", beta)
 
 #check number of cores
 num_cores = os.cpu_count()
@@ -182,19 +184,25 @@ start_pc = time.perf_counter()
 start_pt = time.process_time()
 print("N events ", N)
 print("Length of weights ", len(new_weight))
+n_empty = 0
 for i in range(N):
             
     if new_weight[i] < 0:
 
 
         cell_idx = [x[0] for x in results[np.where(neg_events == i)[0][0]] if len(x) > 0]
-        print("Cells with negative weights ", cell_idx)
+        # print("Cells with negative weights ", cell_idx)
         max_cell = new_weight[cell_idx]
         cell_weight = 0
         abs_cell_weight = 0
 
         cumsum = np.cumsum(max_cell)
-
+        # print("cumulative sum ", cumsum)
+        #### protect against cells w/ no nearest neighbots
+        if len(cumsum) < 1:
+            n_empty += 1
+            continue
+            
         # Find the first index where cumulative sum becomes positive
         idx = np.argmax(cumsum > 0)  # position of first True        
         if np.any(cumsum > 0):
@@ -214,7 +222,6 @@ for i in range(N):
         if cell_weight <= 0:
             continue
 
-        #print(i, cell_idx)
         if num_elements > 1:
             cell_pop.append(num_elements)
             cell_radius.append(compute_emds(points[i], points[cell_idx[idx]]))
@@ -233,8 +240,16 @@ else:
     warnings.warn("WARNING: SUM OF WEIGHTS BEFORE AND AFTER REWEIGHTING DO NOT MATCH", UserWarning)
 #-------------------------------------------------------------------------------------------------------------------------------------
 np.save(output_filepath, new_weight)
-
+print("Saved file to ", output_filepath)
+final_pc = time.perf_counter() - total_pc
+final_pt = time.process_time() - total_pt
+print("Total time taken: ", final_pc, " (pc) ", final_pt, " (pt)")
 bins = np.linspace(0, int(np.ceil(max_radius)), int(np.ceil(max_radius)) + 1)
+
+if "." in str(max_radius):
+    max_radius_str = str(max_radius).replace(".", "p")
+else:
+    max_radius_str = str(max_radius)
 
 plt.figure()
 plt.hist(cell_radius, bins = bins);
@@ -243,13 +258,13 @@ plt.xlabel('Radius [GeV]')
 plt.ylabel('Frequency');
 if whattype == 2:
     plt.title('Hadronization Reweight Cell Radius')
-    plt.savefig(f'cell_radius_had_{int(max_radius)}gev.png')
+    plt.savefig(f'cell_radius_had_{max_radius_str}gev.png')
 elif whattype == 1:
     plt.title('Showered Reweight Cell Radius')
-    plt.savefig(f'cell_radius_sho_{int(max_radius)}gev.png')
+    plt.savefig(f'cell_radius_sho_{max_radius_str}gev.png')
 elif whattype == 0:
     plt.title('Hard Process Cell Radius')
-    plt.savefig(f'cell_radius_hp_{int(max_radius)}gev.png')
+    plt.savefig(f'cell_radius_hp_{max_radius_str}gev.png')
 
 
 plt.figure()
@@ -259,11 +274,11 @@ plt.title(f'Number of Events in Cell (R = {max_radius} GeV)')
 plt.xlabel('#')
 plt.ylabel('Frequency');
 if whattype == 2:
-    plt.savefig(f'cell_pop_had_{int(max_radius)}gev.png')
+    plt.savefig(f'cell_pop_had_{max_radius_str}gev.png')
 elif whattype == 1:
-    plt.savefig(f'cell_pop_sho_{int(max_radius)}gev.png')
+    plt.savefig(f'cell_pop_sho_{max_radius_str}gev.png')
 elif whattype == 0:
-    plt.savefig(f'cell_pop_hp_{int(max_radius)}gev.png')
+    plt.savefig(f'cell_pop_hp_{max_radius_str}gev.png')
 
 
 plt.figure()
@@ -272,11 +287,11 @@ plt.yscale('log')
 plt.title(f'Number of Negative Events in Cell (R = {max_radius} GeV)')
 plt.xlabel('#')
 plt.ylabel('Frequency');
-plt.savefig(f'../plots/neg_cell_pop_{whattype}_{max_radius}gev.png')
+plt.savefig(f'../plots/neg_cell_pop_{whattype}_{max_radius_str}gev.png')
 if whattype == 2:
-    plt.savefig(f'../plots/neg_cell_pop_had_{int(max_radius)}gev.png')
+    plt.savefig(f'../plots/neg_cell_pop_had_{max_radius_str}gev.png')
 elif whattype == 1:
-    plt.savefig(f'../plots/neg_cell_pop_sho_{int(max_radius)}gev.png')
+    plt.savefig(f'../plots/neg_cell_pop_sho_{max_radius_str}gev.png')
 elif whattype == 0:
-    plt.savefig(f'../plots/neg_cell_pop_hp_{int(max_radius)}gev.png')
+    plt.savefig(f'../plots/neg_cell_pop_hp_{max_radius_str}gev.png')
 
