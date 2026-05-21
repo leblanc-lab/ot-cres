@@ -10,10 +10,11 @@ hep.style.ROOT
 cmap  = ["magenta", "red", "blue", "gold", "lime"]
 
 def clean_filename(s):
-    s = re.sub(r'\$*?\$', '', s)        # remove LaTeX math
-    s = re.sub(r'\.', 'p', s)  ###replace points w/ p
-    s = re.sub(r'[^A-Za-z0-9]+', '_', s) # non-alphanumeric → _
-    s = re.sub(r'_+', '_', s)            # collapse _
+    s = s.replace('$', '')                # keep content, drop delimiters
+    s = re.sub(r'\\', '', s)              # remove LaTeX backslashes (\beta → beta)
+    s = re.sub(r'\.', 'p', s)             
+    s = re.sub(r'[^A-Za-z0-9]+', '_', s)
+    s = re.sub(r'_+', '_', s)
     return s.strip('_')
 
 def get_ratio_unc(num, denom):
@@ -32,28 +33,38 @@ def find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return array[idx]
 
-def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel=None, ymin=1e-4, ymax=1e0, logy=True, title="TTbar", channel="zjets_100k",raxlim=[0.85, 1.15]):
+def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel=None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False):
     if sel is None:
         sel  = np.ones_like(weights_orig, dtype=bool)
+    if logx:
+        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
+        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
+        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
+    else:
+        axis_o = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
+        axis_rw = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
     sel_weights = weights_orig[sel]
     #cmap  = cm.Dark2.colors 
-    cmap  = tuple(tuple(c) for c in plt.cm.viridis(np.linspace(0.1, 1.0, len(df["radius"]))))
+    # if channel=="Zjets":
+    cmap  = tuple(tuple(c) for c in plt.cm.hsv(np.linspace(0.1, 1.0, 3)))
+    # else:
+    #     cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(df["radius"]))))
     markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', '1', '2', '3']
     fig, (ax, rax) = plt.subplots(nrows=2,
                             ncols=1,
-                            figsize=(8,6),
+                            figsize=(8,8),
                             gridspec_kw={"height_ratios": (3, 1)},
                             sharex=True)
 
     
     h_orig = hist.Hist(
-            hist.axis.Regular(numbins,xmin, xmax,name="data",label="TTbar orig",),
+            axis_o,
             storage=hist.storage.Weight(), 
         )
     h_orig.fill(obs, weight = sel_weights)
     h_orig = h_orig/h_orig.sum(flow=False).value
     hep.histplot(h_orig, ax=ax, label = "Original", color='black')
-    cmap  = tuple(tuple(c) for c in plt.cm.viridis(np.linspace(0.1, 1.0, len(df["radius"]))))
+    cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(df["radius"]))))
     markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', 'd', '1', '2', '3']
 
     # We don't want to plot everything if there are too many numbers
@@ -68,7 +79,7 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         weights = np.array(df.loc[df["radius"]==R, "weights"].squeeze())[sel]
         frac = df.loc[df["radius"]==R, "fraction"].iloc[0]
         h = hist.Hist(
-            hist.axis.Regular(numbins,xmin, xmax,name="data",label="TTbar reweighted",),
+            axis_rw,
             storage=hist.storage.Weight(), 
         )
         h.fill(obs, weight = weights)
@@ -79,13 +90,13 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
         ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
         hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = np.sqrt(ratio_unc), marker=markerStyles[i%len(markerStyles)], color =cmap[i])
-        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={R} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i])
+        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i])
     hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1), color='black')
     rax.set_xlabel(rf"${obs_str}$", fontsize=12)
     rax.set_ylabel("Ratio to Original", fontsize=12)
     rax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
     rax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
-    ax.set_title(title)
+    # ax.set_title(title)
     ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=12)
     ax.set_xlabel(None)
     ax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
@@ -95,30 +106,42 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
     rax.set_xlim(xmin, xmax)
     if logy:
         ax.set_yscale('log')
+    if logx:
+        ax.set_xscale('log')
     ax.set_ylim(ymin, ymax)
     ax.legend(frameon=False)
     plt.subplots_adjust(hspace=0.05)
+    filename = clean_filename(f"{title}_{obs_title}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
       os.makedirs(directory)
-    plt.savefig(f"{directory}/{title}_{obs_str}.png")
+    plt.savefig(f"{directory}/{filename}", bbox_inches='tight')
     plt.show()
 
-def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, ymax=1e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "zjets_100k", rwFrac = 0.5):
+def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, ymax=1e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True):
+    if logx:
+        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
+        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
+        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
+    else:
+        axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+        axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
     if sel is None:
         sel  = np.ones_like(weights_orig, dtype=bool)
     fig, (ax, rax) = plt.subplots(nrows=2,
                         ncols=1,
-                        figsize=(8,6),
+                        figsize=(8,8),
                         gridspec_kw={"height_ratios": (3, 1)},
                         sharex=True)
     h_orig = hist.Hist(
-        hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",),
+        axis_o,
         storage=hist.storage.Weight(), )
     h_orig.fill(obs, weight = weights_orig[sel])
     h_orig = h_orig/h_orig.sum(flow=False).value
     hep.histplot(h_orig, ax=ax, label = "Original", color='black')
-    cmap  = tuple(tuple(c) for c in plt.cm.viridis(np.linspace(0.1, 1.0, len(dfs))))
+    cmap  = tuple(tuple(c) for c in plt.cm.hsv(np.linspace(0.1, 1.0,  len(dfs))))
+    # else:
+    #      cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(dfs))))
     markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x']
 
     for i, df in enumerate(dfs):
@@ -129,7 +152,7 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
             continue
         weights = np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())[sel]
         h = hist.Hist(
-            hist.axis.Regular(nbins,xmin, xmax,name="data",label="reweighted",),
+            axis_rw,
             storage=hist.storage.Weight(), 
         )
         h.fill(obs, weight = weights)
@@ -147,18 +170,20 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
     rax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
     rax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
     rax.set_ylim(raxlim[0], raxlim[1])
-    
-    ax.set_title(process_title)
-    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=12)
+    if logy:
+        ax.set_yscale('log')
+    if logx:
+        ax.set_xscale('log')
+    # ax.set_title(process_title)
+    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=18)
     ax.set_xlabel(None)
     ax.set_ylim(ymin, ymax)
     ax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
     ax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
     ax.legend(frameon=False)
-    ax.set_yscale('log')
     plt.subplots_adjust(hspace=0.05)
     filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
       os.makedirs(directory)
-    plt.savefig(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}", bbox_inches='tight')
