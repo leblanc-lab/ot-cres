@@ -33,7 +33,7 @@ def find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return array[idx]
 
-def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel=None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False):
+def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel=None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False, process_title = "", units=""):
     if sel is None:
         sel  = np.ones_like(weights_orig, dtype=bool)
     if logx:
@@ -90,21 +90,25 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
         ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
         #hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = np.sqrt(ratio_unc), marker=markerStyles[i%len(markerStyles)], color =cmap[i])
-        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i])
+        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i], markersize=8 )
 
-        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i])
+        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i], yerr=False, markersize=8 )
     #hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1), color='black')
     hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = False, color='black')
-    rax.set_xlabel(rf"${obs_str}$", fontsize=12)
-    rax.set_ylabel("Ratio to Original", fontsize=12)
-    rax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
-    rax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
+    rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
+    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center')
+
+    rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
     # ax.set_title(title)
-    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=12)
+    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=24, loc="top")
+
     ax.set_xlabel(None)
     ax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
     ax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
     ax.legend(frameon=False)
+    ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
+
     rax.set_ylim(raxlim[0], raxlim[1])
     rax.set_xlim(xmin, xmax)
     if logy:
@@ -112,8 +116,13 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
     if logx:
         ax.set_xscale('log')
     ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin, xmax)
+    ax.minorticks_on()
+    rax.minorticks_on()
+    ax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
     ax.legend(frameon=False)
-    plt.subplots_adjust(hspace=0.05)
+    plt.subplots_adjust(hspace=0)
     filename = clean_filename(f"{title}_{obs_title}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
@@ -191,7 +200,7 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
     ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
     ax.legend(frameon=False, fontsize=12, loc="upper right", borderpad=1.0)
     plt.subplots_adjust(hspace=0.0)
-    ax.text(0.05, 0.93, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=20)
+    ax.text(0.05, 0.95, process_title + "\nReweight fraction: %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
     filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
