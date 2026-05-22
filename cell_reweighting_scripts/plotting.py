@@ -24,7 +24,7 @@ def get_ratio_unc(num, denom):
     var_denom = denom.variances()
     ratio = np.divide(val_num, val_denom, where=val_denom!=0, out=np.ones_like(val_denom))
 
-    rel_var = np.divide(var_num, val_num**2, where=val_num!=0) + np.divide(var_denom, val_denom**2, where=val_denom!=0)
+    rel_var = np.divide(var_num, val_num**2, where=val_num!=0, out=None) + np.divide(var_denom, val_denom**2, where=val_denom!=0, out=None)
     ratio_var = (ratio**2)*rel_var
     return ratio, ratio_var
 
@@ -89,9 +89,12 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         bin_edges = h.axes[0].edges
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
         ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
-        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = np.sqrt(ratio_unc), marker=markerStyles[i%len(markerStyles)], color =cmap[i])
+        #hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = np.sqrt(ratio_unc), marker=markerStyles[i%len(markerStyles)], color =cmap[i])
+        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i])
+
         hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i])
-    hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1), color='black')
+    #hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1), color='black')
+    hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = False, color='black')
     rax.set_xlabel(rf"${obs_str}$", fontsize=12)
     rax.set_ylabel("Ratio to Original", fontsize=12)
     rax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
@@ -118,7 +121,7 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
     plt.savefig(f"{directory}/{filename}", bbox_inches='tight')
     plt.show()
 
-def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, ymax=1e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True):
+def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, ymax=3e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True, colors = [], markers = [], units = ""):
     if logx:
         bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
         axis_o = hist.axis.Variable(bins,name="data",label="orig",)
@@ -131,7 +134,7 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
     fig, (ax, rax) = plt.subplots(nrows=2,
                         ncols=1,
                         figsize=(8,8),
-                        gridspec_kw={"height_ratios": (3, 1)},
+                        gridspec_kw={"height_ratios": (2, 1)},
                         sharex=True)
     h_orig = hist.Hist(
         axis_o,
@@ -163,27 +166,36 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
         ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
         hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
-        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=cmap[i], histtype='errorbar', yerr = np.sqrt(ratio_unc), marker=markerStyles[i] )
-        hep.histplot(h, ax=ax, label = f"{round(cfrac*100)}% RW {strings[i]}", color=cmap[i], histtype='errorbar', marker=markerStyles[i])
-    rax.set_xlabel(rf"${obs_str}$", fontsize=12)
-    rax.set_ylabel("Ratio to Original", fontsize=12)
-    rax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
-    rax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
+        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8 )
+        hep.histplot(h, ax=ax, label = f"{round(cfrac*100)}% RW {strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8)
+
+    rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
+    #rax.set_ylabel("Ratio to\nOriginal", fontsize=18, loc="center", multialignment='center')
+    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center')
+    rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
     rax.set_ylim(raxlim[0], raxlim[1])
+    rax.set_xlim(xmin, xmax)
     if logy:
         ax.set_yscale('log')
     if logx:
         ax.set_xscale('log')
     # ax.set_title(process_title)
-    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=18)
+    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=24, loc="top")
     ax.set_xlabel(None)
     ax.set_ylim(ymin, ymax)
-    ax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
-    ax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
-    ax.legend(frameon=False)
-    plt.subplots_adjust(hspace=0.05)
+    ax.set_xlim(xmin, xmax)
+    ax.minorticks_on()
+    rax.minorticks_on()
+    ax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.legend(frameon=False, fontsize=12, loc="upper right", borderpad=1.0)
+    plt.subplots_adjust(hspace=0.0)
+    ax.text(0.05, 0.93, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=20)
     filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
       os.makedirs(directory)
-    plt.savefig(f"{directory}/{filename}", bbox_inches='tight')
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+
