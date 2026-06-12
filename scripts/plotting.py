@@ -6,8 +6,39 @@ import numpy as np
 import mplhep as hep
 import os
 import re
+from matplotlib.colors import LinearSegmentedColormap as lsc
 hep.style.ROOT
 cmap  = ["magenta", "red", "blue", "gold", "lime"]
+
+def cmap_map(function, cmap):
+    """ Applies function (which should operate on vectors of shape 3: [r, g, b]), on colormap cmap.
+    This routine will break any discontinuous points in a colormap.
+    """
+    cdict = cmap._segmentdata
+    step_dict = {}
+    # Firt get the list of points where the segments start or end
+    for key in ('red', 'green', 'blue'):
+        step_dict[key] = list(map(lambda x: x[0], cdict[key]))
+    step_list = sum(step_dict.values(), [])
+    step_list = np.array(list(set(step_list)))
+    # Then compute the LUT, and apply the function to the LUT
+    reduced_cmap = lambda step : np.array(cmap(step)[0:3])
+    old_LUT = np.array(list(map(reduced_cmap, step_list)))
+    new_LUT = np.array(list(map(function, old_LUT)))
+    # Now try to make a minimal segment definition of the new LUT
+    cdict = {}
+    for i, key in enumerate(['red','green','blue']):
+        this_cdict = {}
+        for j, step in enumerate(step_list):
+            if step in step_dict[key]:
+                this_cdict[step] = new_LUT[j, i]
+            elif new_LUT[j,i] != old_LUT[j, i]:
+                this_cdict[step] = new_LUT[j, i]
+        colorvector = list(map(lambda x: x + (x[1], ), this_cdict.items()))
+        colorvector.sort()
+        cdict[key] = colorvector
+
+    return lsc('colormap',cdict,1024)
 
 def clean_filename(s):
     s = s.replace('$', '')                # keep content, drop delimiters
@@ -96,7 +127,7 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
     #hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1), color='black')
     hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = False, color='black')
     rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
-    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center')
+    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center',labelpad=18)
 
     rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
     rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
@@ -121,13 +152,14 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
     rax.minorticks_on()
     ax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
     ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
     ax.legend(frameon=False)
     plt.subplots_adjust(hspace=0)
     filename = clean_filename(f"{title}_{obs_title}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
       os.makedirs(directory)
-    plt.savefig(f"{directory}/{filename}", bbox_inches='tight')
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
     plt.show()
 
 def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, ymax=3e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True, colors = [], markers = [], units = ""):
@@ -143,7 +175,7 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
     fig, (ax, rax) = plt.subplots(nrows=2,
                         ncols=1,
                         figsize=(8,8),
-                        gridspec_kw={"height_ratios": (2, 1)},
+                        gridspec_kw={"height_ratios": (3, 1)},
                         sharex=True)
     h_orig = hist.Hist(
         axis_o,
@@ -154,7 +186,6 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
     cmap  = tuple(tuple(c) for c in plt.cm.hsv(np.linspace(0.1, 1.0,  len(dfs))))
     # else:
     #      cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(dfs))))
-    markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x']
 
     for i, df in enumerate(dfs):
         cfrac = find_nearest(df["fraction"], rwFrac)
@@ -175,14 +206,15 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
         ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
         hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
-        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8 )
-        hep.histplot(h, ax=ax, label = f"{round(cfrac*100)}% RW {strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8)
+        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8, fillstyle="full")
+        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8, fillstyle="full")
 
     rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
-    #rax.set_ylabel("Ratio to\nOriginal", fontsize=18, loc="center", multialignment='center')
-    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center')
+
+    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center',labelpad=18)
     rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
     rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
     rax.set_ylim(raxlim[0], raxlim[1])
     rax.set_xlim(xmin, xmax)
     if logy:
@@ -208,3 +240,80 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
     print(f"{directory}/{filename}")
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
 
+def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins, ymin=1e-5, ymax=3e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True, colors = [], markers = [], units = ""):
+    if logx:
+        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
+        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
+        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
+    else:
+        axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+        axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+    if sel is None:
+        sel  = np.ones_like(weights_orig, dtype=bool)
+    fig, (ax, rax) = plt.subplots(nrows=2,
+                        ncols=1,
+                        figsize=(8,8),
+                        gridspec_kw={"height_ratios": (3, 1)},
+                        sharex=True)
+    h_orig = hist.Hist(
+        axis_o,
+        storage=hist.storage.Weight(), )
+    h_orig.fill(obs, weight = weights_orig[sel])
+    h_orig = h_orig/h_orig.sum(flow=False).value
+    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
+    cmap  = tuple(tuple(c) for c in plt.cm.hsv(np.linspace(0.1, 1.0,  len(dfs))))
+    # else:
+    #      cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(dfs))))
+
+    for i, df in enumerate(dfs):
+        cfrac = find_nearest(df["fraction"], rwFrac)
+        if(len(np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())) != len(sel)):
+            print("nothing matching the fraction")
+            print(cfrac, df["fraction"], rwFrac)
+            continue
+        weights = np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())[sel]
+        h = hist.Hist(
+            axis_rw,
+            storage=hist.storage.Weight(), 
+        )
+        h.fill(obs, weight = weights)
+        #### Normalize hists
+        h = h/h.sum(flow=False).value
+        bin_centers = h.axes[0].centers
+        bin_edges = h.axes[0].edges
+        ratio, ratio_unc = get_ratio_unc(h, h_orig)
+        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
+        hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
+        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8, fillstyle="full")
+        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8, fillstyle="full")
+
+    rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
+
+    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center',labelpad=18)
+    rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
+    rax.set_ylim(raxlim[0], raxlim[1])
+    rax.set_xlim(xmin, xmax)
+    if logy:
+        ax.set_yscale('log')
+    if logx:
+        ax.set_xscale('log')
+    # ax.set_title(process_title)
+    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=24, loc="top")
+    ax.set_xlabel(None)
+    ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin, xmax)
+    ax.minorticks_on()
+    rax.minorticks_on()
+    ax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+    ax.legend(frameon=False, fontsize=12, loc="upper right", borderpad=1.0)
+    plt.subplots_adjust(hspace=0.0)
+    ax.text(0.05, 0.95, process_title + "\nReweight fraction: %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
+    filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
+    directory = f"../plots/{channel}"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
