@@ -21,17 +21,15 @@ source negweights/bin/activate
 
 ## Repository Structure
 
-- `cell_reweighting_scripts/` — Core workflow: build a vp-tree of particle coordinates (or _points_) from a `.root` file, perform the cell reweighting, and plot the results. See [cell_reweighting_scripts/README.md](cell_reweighting_scripts/README.md) for usage details.
-- `SEMD/` — SLURM/GPU scripts that compute SPECTER-based EMD ("SEMD") distance matrices using JAX.
-- `XMD_scripts/` — Scripts and notebooks that compute XMD, the optimal-transport distance between original and reweighted event-weight distributions, used to evaluate reweighting quality across different cell radii.
-- `xmd_files/` — Precomputed XMD result arrays (`.npy`) consumed by the XMD notebooks.
-- `vptree_pkls/` — Cached vp-trees produced by `make_vptree.py`. These pickles are large and regenerable, so they are not tracked in git.
+- `scripts/` — Core workflow: build a vp-tree of particle coordinates (or _points_) from a `.root` file, perform the cell reweighting, and plot the results. See [scripts/README.md](scripts/README.md) for usage details.
+  - `SEMD/` — SLURM/GPU scripts that compute SPECTER-based EMD ("SEMD") distance matrices using JAX.
+  - `XMD/` — Scripts and submission jobs that compute XMD, the optimal-transport distance between original and reweighted event-weight distributions, used to evaluate reweighting quality across different cell radii.
+- `notebooks/` — Jupyter notebooks for tutorials and plotting, including `Intro.ipynb` (background on the cell-reweighting procedure and the EMD metric), `EMD_cartoon_zjet.ipynb` (tutorial demonstrating EMD computation for Z+jet events with EnergyFlow/POT), and `stat_power_plot.ipynb` (statistical-power scaling plot for the negative-weight fraction).
+- `data/` — Inputs and intermediate results:
+  - `vptree_pkls/` — Cached vp-trees produced by `make_vptree.py`. These pickles are large and regenerable, so they are not tracked in git.
+  - `xmd_files/` — Precomputed XMD result arrays (`.npy`) consumed by the XMD notebooks.
+  - `reweighted_files/` — Reweighted event-weight arrays (`.npy`) produced by the cell-reweighting scripts.
 - `plots/` — Output plots from the reweighting and plotting scripts, organized by sample (e.g. `TTbar`, `Zjets`).
-- `plot_observable.py`, `plot_cell_radius_hist.py` — Top-level scripts that plot kinematic observables and cell-radius histograms from distance matrices and event-weight files.
-- `make_vptrees.sh` — Example SLURM batch script for building a vp-tree.
-- `Intro.ipynb` — Background on the cell-reweighting procedure and the EMD metric.
-- `EMD_cartoon_zjet.ipynb` — Tutorial demonstrating EMD computation for Z+jet events with EnergyFlow/POT.
-- `stat_power_plot.ipynb` — Statistical-power scaling plot for the negative-weight fraction (`negative_fraction_scaling.png`).
 
 -------------------------------------
 
@@ -39,4 +37,4 @@ source negweights/bin/activate
 
 Cell reweighting in theory performs better the more events one has to sample from, and the radius can grow arbitrarily small. However, the computing time for cell resampling grows quadratically with the number of events, so for statistically significant samples, batched jobs are recommended.
 
-An example batch script for reweighting lives [here](https://github.com/laurenhay/cres-distance/blob/main/cell_reweighting_scripts/reweight_100k.sh).
+An example batch script for reweighting lives [here](https://github.com/laurenhay/cres-distance/blob/main/scripts/reweight_100k.sh).

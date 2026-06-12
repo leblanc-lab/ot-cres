@@ -12,4 +12,4 @@
 source /users/lhay/negweights/bin/activate
 
 #Run python script
-python3 -u /users/lhay/cres-distance/cell_reweighting_scripts/brute_force_rw.py
+python3 -u /users/lhay/cres-distance/scripts/brute_force_rw.py

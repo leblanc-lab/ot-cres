@@ -15,4 +15,4 @@ echo "Starting job ${SLURM_ARRAY_TASK_ID} on $HOSTNAME"
 source /users/lhay/negweights/bin/activate
 
 #Run python script
-python3 -u 100k_cell_reweighting.py --max_radius=${SLURM_ARRAY_TASK_ID} --path="/users/lhay/cres-distance/reweighted_files/10k_ps_emd_reweight_${SLURM_ARRAY_TASK_ID}gev_ttbar.npy" --vptree='/users/lhay/cres-distance/vptree_pkls/10k_ps_ttbar_vptree.pkl' --points="/users/lhay/NegativeWeights/showered_ttbar_points10k.npy" --weights="/users/lhay/NegativeWeights/ttbar_weight_10k.npy" --whattype=2 --beta=2
+python3 -u 100k_cell_reweighting.py --max_radius=${SLURM_ARRAY_TASK_ID} --path="/users/lhay/cres-distance/data/reweighted_files/10k_ps_emd_reweight_${SLURM_ARRAY_TASK_ID}gev_ttbar.npy" --vptree='/users/lhay/cres-distance/data/vptree_pkls/10k_ps_ttbar_vptree.pkl' --points="/users/lhay/NegativeWeights/showered_ttbar_points10k.npy" --weights="/users/lhay/NegativeWeights/ttbar_weight_10k.npy" --whattype=2 --beta=2

@@ -11,4 +11,4 @@
 source /users/lhay/negweights/bin/activate
 
 #Run python script
-python3 -u /users/lhay/cres-distance/cell_reweighting_scripts/make_vptree.py --path="/users/lhay/cres-distance/vptree_pkls/zjet_100k_had_b2_vptree.pkl" --point_path="/users/lhay/data/rjain/ppzjj_100k/hadronization_points.npy" --beta=2
+python3 -u /users/lhay/cres-distance/scripts/make_vptree.py --path="/users/lhay/cres-distance/data/vptree_pkls/zjet_100k_had_b2_vptree.pkl" --point_path="/users/lhay/data/rjain/ppzjj_100k/hadronization_points.npy" --beta=2
