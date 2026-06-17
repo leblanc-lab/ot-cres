@@ -7,38 +7,10 @@ import mplhep as hep
 import os
 import re
 from matplotlib.colors import LinearSegmentedColormap as lsc
+from scipy.optimize import curve_fit
+import awkward as ak
+
 hep.style.ROOT
-cmap  = ["magenta", "red", "blue", "gold", "lime"]
-
-def cmap_map(function, cmap):
-    """ Applies function (which should operate on vectors of shape 3: [r, g, b]), on colormap cmap.
-    This routine will break any discontinuous points in a colormap.
-    """
-    cdict = cmap._segmentdata
-    step_dict = {}
-    # Firt get the list of points where the segments start or end
-    for key in ('red', 'green', 'blue'):
-        step_dict[key] = list(map(lambda x: x[0], cdict[key]))
-    step_list = sum(step_dict.values(), [])
-    step_list = np.array(list(set(step_list)))
-    # Then compute the LUT, and apply the function to the LUT
-    reduced_cmap = lambda step : np.array(cmap(step)[0:3])
-    old_LUT = np.array(list(map(reduced_cmap, step_list)))
-    new_LUT = np.array(list(map(function, old_LUT)))
-    # Now try to make a minimal segment definition of the new LUT
-    cdict = {}
-    for i, key in enumerate(['red','green','blue']):
-        this_cdict = {}
-        for j, step in enumerate(step_list):
-            if step in step_dict[key]:
-                this_cdict[step] = new_LUT[j, i]
-            elif new_LUT[j,i] != old_LUT[j, i]:
-                this_cdict[step] = new_LUT[j, i]
-        colorvector = list(map(lambda x: x + (x[1], ), this_cdict.items()))
-        colorvector.sort()
-        cdict[key] = colorvector
-
-    return lsc('colormap',cdict,1024)
 
 def clean_filename(s):
     s = s.replace('$', '')                # keep content, drop delimiters
@@ -54,7 +26,6 @@ def get_ratio_unc(num, denom):
     var_num = num.variances()
     var_denom = denom.variances()
     ratio = np.divide(val_num, val_denom, where=val_denom!=0, out=np.ones_like(val_denom))
-
     rel_var = np.divide(var_num, val_num**2, where=val_num!=0, out=None) + np.divide(var_denom, val_denom**2, where=val_denom!=0, out=None)
     ratio_var = (ratio**2)*rel_var
     return ratio, ratio_var
@@ -64,7 +35,17 @@ def find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return array[idx]
 
-def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel=None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False, process_title = "", units=""):
+def configure_axis(axis, xlabel, ylabel, fontsizeX = 16, fontsizeY = 16, yaxisAlignment = "top"):
+    axis.set_xlabel(xlabel, fontsize=fontsizeX, loc="right", multialignment='center',labelpad=14)
+    axis.set_ylabel(ylabel, fontsize=fontsizeY, loc=yaxisAlignment, multialignment='center',labelpad=14)
+    axis.minorticks_on()
+    axis.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    axis.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+
+def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel=None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False, process_title = "", units="", maxNHists = 6):
+    cmap  = ["magenta", "red", "blue", "gold", "lime"]
+    markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', 'd', '1', '2', '3']
+
     if sel is None:
         sel  = np.ones_like(weights_orig, dtype=bool)
     if logx:
@@ -75,19 +56,13 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         axis_o = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
         axis_rw = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
     sel_weights = weights_orig[sel]
-    #cmap  = cm.Dark2.colors 
-    # if channel=="Zjets":
-    cmap  = tuple(tuple(c) for c in plt.cm.hsv(np.linspace(0.1, 1.0, 3)))
-    # else:
-    #     cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(df["radius"]))))
-    markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', '1', '2', '3']
+
     fig, (ax, rax) = plt.subplots(nrows=2,
                             ncols=1,
                             figsize=(8,8),
                             gridspec_kw={"height_ratios": (3, 1)},
                             sharex=True)
 
-    
     h_orig = hist.Hist(
             axis_o,
             storage=hist.storage.Weight(), 
@@ -96,11 +71,9 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
     h_orig = h_orig/h_orig.sum(flow=False).value
     hep.histplot(h_orig, ax=ax, label = "Original", color='black')
     cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(df["radius"]))))
-    markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', 'd', '1', '2', '3']
 
     # We don't want to plot everything if there are too many numbers
     delta = 1
-    maxNHists = 6
     if(len( df["radius"].values) > maxNHists):
         delta  = int( len( df["radius"].values) / maxNHists)
 
@@ -120,23 +93,13 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         bin_edges = h.axes[0].edges
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
         ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
-        #hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = np.sqrt(ratio_unc), marker=markerStyles[i%len(markerStyles)], color =cmap[i])
+
         hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i], markersize=8 )
 
         hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i], yerr=False, markersize=8 )
-    #hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1), color='black')
     hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = False, color='black')
-    rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
-    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center',labelpad=18)
-
-    rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
-    rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
-    # ax.set_title(title)
-    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=24, loc="top")
 
     ax.set_xlabel(None)
-    ax.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True)
-    ax.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True)
     ax.legend(frameon=False)
     ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
 
@@ -148,10 +111,8 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         ax.set_xscale('log')
     ax.set_ylim(ymin, ymax)
     ax.set_xlim(xmin, xmax)
-    ax.minorticks_on()
-    rax.minorticks_on()
-    ax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
-    ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+    configure_axis(ax, "",  r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsizeY=24)
+    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original")
     ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
     ax.legend(frameon=False)
     plt.subplots_adjust(hspace=0)
@@ -183,9 +144,6 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
     h_orig.fill(obs, weight = weights_orig[sel])
     h_orig = h_orig/h_orig.sum(flow=False).value
     hep.histplot(h_orig, ax=ax, label = "Original", color='black')
-    cmap  = tuple(tuple(c) for c in plt.cm.hsv(np.linspace(0.1, 1.0,  len(dfs))))
-    # else:
-    #      cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(dfs))))
 
     for i, df in enumerate(dfs):
         cfrac = find_nearest(df["fraction"], rwFrac)
@@ -209,11 +167,6 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
         hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8, fillstyle="full")
         hep.histplot(h, ax=ax, label = f"{strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8, fillstyle="full")
 
-    rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
-
-    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center',labelpad=18)
-    rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
-    rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
     ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
     rax.set_ylim(raxlim[0], raxlim[1])
     rax.set_xlim(xmin, xmax)
@@ -221,18 +174,13 @@ def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, 
         ax.set_yscale('log')
     if logx:
         ax.set_xscale('log')
-    # ax.set_title(process_title)
-    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=24, loc="top")
-    ax.set_xlabel(None)
     ax.set_ylim(ymin, ymax)
     ax.set_xlim(xmin, xmax)
-    ax.minorticks_on()
-    rax.minorticks_on()
-    ax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
-    ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
-    ax.legend(frameon=False, fontsize=12, loc="upper right", borderpad=1.0)
+    configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsizeY=24)
+    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original", fontsizeX = 20, yaxisAlignment = "center")
+    ax.legend(frameon=False, fontsize=18, loc="upper right", borderpad=1.0)
     plt.subplots_adjust(hspace=0.0)
-    ax.text(0.05, 0.95, process_title + "\nReweight fraction: %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
+    ax.text(0.05, 0.95, process_title + "\n" r"$f_{rw}$ = %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=18)
     filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
@@ -261,9 +209,6 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
     h_orig.fill(obs, weight = weights_orig[sel])
     h_orig = h_orig/h_orig.sum(flow=False).value
     hep.histplot(h_orig, ax=ax, label = "Original", color='black')
-    cmap  = tuple(tuple(c) for c in plt.cm.hsv(np.linspace(0.1, 1.0,  len(dfs))))
-    # else:
-    #      cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(dfs))))
 
     for i, df in enumerate(dfs):
         cfrac = find_nearest(df["fraction"], rwFrac)
@@ -287,11 +232,8 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
         hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8, fillstyle="full")
         hep.histplot(h, ax=ax, label = f"{strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8, fillstyle="full")
 
-    rax.set_xlabel(rf"${obs_str} \ {units}$", fontsize=24, loc="right")
-
-    rax.set_ylabel("Ratio to Original", fontsize=18, loc="center", multialignment='center',labelpad=18)
-    rax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
-    rax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original")
+    configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str)
     ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
     rax.set_ylim(raxlim[0], raxlim[1])
     rax.set_xlim(xmin, xmax)
@@ -299,15 +241,9 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
         ax.set_yscale('log')
     if logx:
         ax.set_xscale('log')
-    # ax.set_title(process_title)
-    ax.set_ylabel(r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsize=24, loc="top")
-    ax.set_xlabel(None)
+
     ax.set_ylim(ymin, ymax)
     ax.set_xlim(xmin, xmax)
-    ax.minorticks_on()
-    rax.minorticks_on()
-    ax.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
-    ax.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
     ax.legend(frameon=False, fontsize=12, loc="upper right", borderpad=1.0)
     plt.subplots_adjust(hspace=0.0)
     ax.text(0.05, 0.95, process_title + "\nReweight fraction: %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
@@ -317,3 +253,154 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
       os.makedirs(directory)
     print(f"{directory}/{filename}")
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+
+
+def sigmoid(x ,L, x0, k):
+    y = L / (1 + np.exp(-k*(x-x0)))
+    return (y)
+    
+def get_fracs(radii, weights, weights_orig):
+    fracs = []
+    for R, weight in zip(radii, weights):
+        # print("orig neg weights ", ak.sum(weights<0))
+        # print("n orig weights ", len(weights))
+        # print("Frac orgi negative weights ", ak.sum(weights_orig<0)/len(weights))
+        frac = (1-ak.sum(weight<0)/ak.sum(weights_orig<0))
+        fracs.append(round(frac, 2))
+    return fracs
+    
+def fit_sigmoid(radii, frac, des_frac=25, string=""):
+    from scipy.optimize import curve_fit
+
+    print(frac)
+    ###initial guess
+    if frac[0]>1.:
+        frac.insert(0, 0)
+        radii.insert(0,0)
+    p0 = [max(frac), np.median(np.array(radii)),1]
+    popt, pcov = curve_fit(sigmoid, np.array(radii), frac, p0)
+    L, x0, k = popt
+    if (L/(des_frac-k))-1 > 0:
+        x = x0-((1/k)*np.log((L/(des_frac))-1))
+        print(f"{string} x value where y = {des_frac}: {x}")
+    else:
+        print(f"No real solution for y = {des_frac} with sigmoid fit.")
+    return popt, pcov
+# def plot_cellradius_comp():
+def sigmoid_Lfixed(x, x0, k, L=100.0):
+    # clip exponent to avoid overflow warnings
+    z = np.clip(-k*(x-x0), -700, 700)
+    return L / (1.0 + np.exp(z))
+def fit_sigmoid_fixedL(radii, fracs, L=100.0, des_frac=25):
+    from scipy.optimize import curve_fit
+
+    # initial guesses
+    if fracs[0]>1.:
+        fracs.insert(0,0)
+        radii.insert(0,0)
+    p0 = [np.median(np.array(radii)),1]
+
+    # bounds: x0 within radii range (with padding), k positive
+    pad = (np.max(radii) - np.min(radii)) if len(radii) > 1 else 10.0
+    bounds = ([np.min(radii) - pad, 1e-6], [np.max(radii) + pad, 10.0])
+
+    popt, pcov = curve_fit(lambda x, x0, k: sigmoid_Lfixed(x, x0, k, L=L),
+                           radii, fracs, p0=p0, bounds=bounds)
+
+    x0, k = popt
+    return (L, x0, k), pcov
+def richards(x, x0, k, nu, L=1.0):
+    z = -k*(x-x0)
+    return L / (1.0 + np.exp(z))**(1.0/nu)
+def fit_richards(radii, fracs, L=1.0):
+    from scipy.optimize import curve_fit
+
+    x0_guess = np.median(radii)
+    k_guess  = 2/np.median(radii)
+    nu_guess = 1.0
+        # optional: let L float, or fix it to max observed
+    if L is None:
+        L = fracs.max()
+    if fracs[0]>1.:
+        fracs.insert(0,0)
+        radii.insert(0,0)
+   
+    pad = (np.max(radii) - np.min(radii)) if len(radii) > 1 else 10.0
+    bounds = (
+        [np.min(radii)-pad, 1e-3, 0.05],   # x0, k, nu
+        [np.max(radii)+pad, 10.0/np.median(radii), 20.0]
+    )
+
+    popt, pcov = curve_fit(lambda x, x0, k, nu: richards(x, x0, k, nu, L=L),
+                           radii, fracs, p0=[x0_guess, k_guess, nu_guess], bounds=bounds)
+    return (*popt, L), pcov
+def richards_x_at_y(y, x0, k, nu, L):
+    y = float(y)
+    if not (0.0 < y < L) or k == 0 or nu <= 0:
+        return np.nan
+    arg = (L / y)**nu - 1.0
+    if arg <= 0:
+        return np.nan
+    return x0 - (1.0 / k) * np.log(arg)
+
+def plot_radii(rw_dicts, directory, comparison, comparisonDict, colors, markers, strings):
+    maxCellRadius = comparisonDict[comparison]["maxCellRadius"]
+    for i, df in enumerate(rw_dicts):
+        frac = df["fraction"].values
+        radii = df["radius"].values
+        plt.scatter(radii, frac, color=colors[i], label = strings[i], marker=markers[i])
+        popt, pcov = fit_richards(radii, frac)
+        x = np.arange(-5,np.max(radii)*1.5)
+        if(max(radii) < 20):
+          x = np.arange(0,np.max(radii)*1.5*10000)/10000
+        frac=0.75
+        print(f"{strings[i]} R for {frac} RW ", round(richards_x_at_y(frac, *popt), 3))
+        frac=0.5
+        print(f"{strings[i]} R for {frac} RW ", round(richards_x_at_y(frac, *popt), 3))
+        frac=0.25
+        print(f"{strings[i]} R for {frac} RW ", round(richards_x_at_y(frac, *popt), 3))
+        plt.plot(x, richards(x, *popt), color=colors[i], linestyle='-')
+
+    plt.xlabel("Max cell radius", fontsize=14, loc="right")
+    plt.minorticks_on()
+    plt.xlim(0, maxCellRadius+(maxCellRadius/2))
+    plt.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True, labelsize=12)
+    plt.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True, labelsize=12) 
+    #configure_axis(plt, "Max cell radius", r"$f_{rw}$")
+    plt.ylabel(r"$f_{rw}$", fontsize=14, loc="top")
+    plt.ylim(0, 1)
+    plt.legend(frameon=False, fontsize=14, loc="lower right", borderpad=1.0)
+    filename = clean_filename(f"radius_{comparison}")
+    directory = f"../plots/radius"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+    plt.clf()
+
+
+def make_df(radii, weights_orig, inputpath0, inputpath1 = "gev_bigR.npy", points = "None"):
+    weights = []
+    for R in radii:
+        str_R = str(R).replace(".", "p")
+        weight = np.load(inputpath0+str_R+inputpath1)
+        if type(points)!=str:
+            weight = fix_weight_length(points, weight, weights_orig)
+        weights.append(weight)
+    fracs = get_fracs(radii, weights, weights_orig)
+    df = pd.DataFrame({
+        "radius": radii,
+        "fraction": fracs,
+        "weights": weights
+    })
+    return df
+    
+def fix_weight_length(points, weights, weights_orig):
+    mask = np.all(points == 0, axis=(1, 2))
+    if len(weights) != len(weights_orig):
+        rw_weights = weights_orig.copy()
+        print("Masking out zero values to fix different lengths: ", mask.shape, rw_weights.shape, weights.shape)
+        rw_weights[~mask] = weights
+        return rw_weights
+    else:
+        return weights
