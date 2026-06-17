@@ -113,6 +113,14 @@ whattype = args.whattype
 point_filepath = args.points
 weight_filepath = args.weights
 print("Max radius ", max_radius," beta ", beta)
+if "had" in vptree_filepath or whattype==2:
+    stage_str = "had"
+elif "ps" in vptree_filepath or whattype==1:
+    stage_str = "ps"
+elif "hp" in vptree_filepath or "hs" in vptree_path or whattype==0:
+    stage_str = "hp"
+else:
+    print("inconsistent stage given")
 
 #check number of cores
 num_cores = os.cpu_count()
@@ -244,54 +252,13 @@ print("Saved file to ", output_filepath)
 final_pc = time.perf_counter() - total_pc
 final_pt = time.process_time() - total_pt
 print("Total time taken: ", final_pc, " (pc) ", final_pt, " (pt)")
-bins = np.linspace(0, int(np.ceil(max_radius)), int(np.ceil(max_radius)) + 1)
+
 
 if "." in str(max_radius):
     max_radius_str = str(max_radius).replace(".", "p")
 else:
     max_radius_str = str(max_radius)
 
-plt.figure()
-plt.hist(cell_radius, bins = bins);
-plt.yscale('log')
-plt.xlabel('Radius [GeV]')
-plt.ylabel('Frequency');
-if whattype == 2:
-    plt.title('Hadronization Reweight Cell Radius')
-    plt.savefig(f'cell_radius_had_{max_radius_str}gev.png')
-elif whattype == 1:
-    plt.title('Showered Reweight Cell Radius')
-    plt.savefig(f'cell_radius_sho_{max_radius_str}gev.png')
-elif whattype == 0:
-    plt.title('Hard Process Cell Radius')
-    plt.savefig(f'cell_radius_hp_{max_radius_str}gev.png')
-
-
-plt.figure()
-plt.hist(cell_pop, bins = 25);
-plt.yscale('log')
-plt.title(f'Number of Events in Cell (R = {max_radius} GeV)')
-plt.xlabel('#')
-plt.ylabel('Frequency');
-if whattype == 2:
-    plt.savefig(f'cell_pop_had_{max_radius_str}gev.png')
-elif whattype == 1:
-    plt.savefig(f'cell_pop_sho_{max_radius_str}gev.png')
-elif whattype == 0:
-    plt.savefig(f'cell_pop_hp_{max_radius_str}gev.png')
-
-
-plt.figure()
-plt.hist(neg_cell_pop, bins = 25);
-plt.yscale('log')
-plt.title(f'Number of Negative Events in Cell (R = {max_radius} GeV)')
-plt.xlabel('#')
-plt.ylabel('Frequency');
-plt.savefig(f'../plots/neg_cell_pop_{whattype}_{max_radius_str}gev.png')
-if whattype == 2:
-    plt.savefig(f'../plots/neg_cell_pop_had_{max_radius_str}gev.png')
-elif whattype == 1:
-    plt.savefig(f'../plots/neg_cell_pop_sho_{max_radius_str}gev.png')
-elif whattype == 0:
-    plt.savefig(f'../plots/neg_cell_pop_hp_{max_radius_str}gev.png')
-
+np.save(f'../data/cell_info/cell_radius_{stage_str}_{max_radius_str}gev_b{int(beta)}.npy', cell_radius)
+np.save(f'../data/cell_info/cell_pop_{stage_str}_{max_radius_str}gev_b{int(beta)}.png', cell_pop)
+np.save(f'../data/cell_info/neg_cell_pop_{stage_str}_{max_radius_str}gev_b{int(beta)}.png', neg_cell_pop)
