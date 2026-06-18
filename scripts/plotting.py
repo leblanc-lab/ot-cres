@@ -4,6 +4,7 @@ import matplotlib.cm as cm
 import hist
 import numpy as np
 import mplhep as hep
+import pandas as pd
 import os
 import re
 from matplotlib.colors import LinearSegmentedColormap as lsc
@@ -35,226 +36,7 @@ def find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return array[idx]
 
-def configure_axis(axis, xlabel, ylabel, fontsizeX = 16, fontsizeY = 16, yaxisAlignment = "top"):
-    axis.set_xlabel(xlabel, fontsize=fontsizeX, loc="right", multialignment='center',labelpad=14)
-    axis.set_ylabel(ylabel, fontsize=fontsizeY, loc=yaxisAlignment, multialignment='center',labelpad=14)
-    axis.minorticks_on()
-    axis.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
-    axis.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
-
-def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel=None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False, process_title = "", units="", maxNHists = 6):
-    cmap  = ["magenta", "red", "blue", "gold", "lime"]
-    markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', 'd', '1', '2', '3']
-
-    if sel is None:
-        sel  = np.ones_like(weights_orig, dtype=bool)
-    if logx:
-        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
-        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
-        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
-    else:
-        axis_o = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
-        axis_rw = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
-    sel_weights = weights_orig[sel]
-
-    fig, (ax, rax) = plt.subplots(nrows=2,
-                            ncols=1,
-                            figsize=(8,8),
-                            gridspec_kw={"height_ratios": (3, 1)},
-                            sharex=True)
-
-    h_orig = hist.Hist(
-            axis_o,
-            storage=hist.storage.Weight(), 
-        )
-    h_orig.fill(obs, weight = sel_weights)
-    h_orig = h_orig/h_orig.sum(flow=False).value
-    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
-    cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(df["radius"]))))
-
-    # We don't want to plot everything if there are too many numbers
-    delta = 1
-    if(len( df["radius"].values) > maxNHists):
-        delta  = int( len( df["radius"].values) / maxNHists)
-
-    for i, R in enumerate(df["radius"].values):
-        if i%delta != 0:
-            continue
-        weights = np.array(df.loc[df["radius"]==R, "weights"].squeeze())[sel]
-        frac = df.loc[df["radius"]==R, "fraction"].iloc[0]
-        h = hist.Hist(
-            axis_rw,
-            storage=hist.storage.Weight(), 
-        )
-        h.fill(obs, weight = weights)
-        #### Normalize hists
-        h = h/h.sum(flow=False).value
-        bin_centers = h.axes[0].centers
-        bin_edges = h.axes[0].edges
-        ratio, ratio_unc = get_ratio_unc(h, h_orig)
-        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
-
-        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i], markersize=8 )
-
-        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i], yerr=False, markersize=8 )
-    hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = False, color='black')
-
-    ax.set_xlabel(None)
-    ax.legend(frameon=False)
-    ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
-
-    rax.set_ylim(raxlim[0], raxlim[1])
-    rax.set_xlim(xmin, xmax)
-    if logy:
-        ax.set_yscale('log')
-    if logx:
-        ax.set_xscale('log')
-    ax.set_ylim(ymin, ymax)
-    ax.set_xlim(xmin, xmax)
-    configure_axis(ax, "",  r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsizeY=24)
-    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original")
-    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
-    ax.legend(frameon=False)
-    plt.subplots_adjust(hspace=0)
-    filename = clean_filename(f"{title}_{obs_title}")
-    directory = f"../plots/{channel}"
-    if not os.path.exists(directory):
-      os.makedirs(directory)
-    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
-    plt.show()
-
-def plot_diff_rw(obs, dfs, strings, weights_orig, xmin, xmax, nbins, ymin=1e-5, ymax=3e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True, colors = [], markers = [], units = ""):
-    if logx:
-        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
-        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
-        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
-    else:
-        axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
-        axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
-    if sel is None:
-        sel  = np.ones_like(weights_orig, dtype=bool)
-    fig, (ax, rax) = plt.subplots(nrows=2,
-                        ncols=1,
-                        figsize=(8,8),
-                        gridspec_kw={"height_ratios": (3, 1)},
-                        sharex=True)
-    h_orig = hist.Hist(
-        axis_o,
-        storage=hist.storage.Weight(), )
-    h_orig.fill(obs, weight = weights_orig[sel])
-    h_orig = h_orig/h_orig.sum(flow=False).value
-    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
-
-    for i, df in enumerate(dfs):
-        cfrac = find_nearest(df["fraction"], rwFrac)
-        if(len(np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())) != len(sel)):
-            print("nothing matching the fraction")
-            print(cfrac, df["fraction"], rwFrac)
-            continue
-        weights = np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())[sel]
-        h = hist.Hist(
-            axis_rw,
-            storage=hist.storage.Weight(), 
-        )
-        h.fill(obs, weight = weights)
-        #### Normalize hists
-        h = h/h.sum(flow=False).value
-        bin_centers = h.axes[0].centers
-        bin_edges = h.axes[0].edges
-        ratio, ratio_unc = get_ratio_unc(h, h_orig)
-        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
-        hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
-        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8, fillstyle="full")
-        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8, fillstyle="full")
-
-    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
-    rax.set_ylim(raxlim[0], raxlim[1])
-    rax.set_xlim(xmin, xmax)
-    if logy:
-        ax.set_yscale('log')
-    if logx:
-        ax.set_xscale('log')
-    ax.set_ylim(ymin, ymax)
-    ax.set_xlim(xmin, xmax)
-    configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsizeY=24)
-    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original", fontsizeX = 20, yaxisAlignment = "center")
-    ax.legend(frameon=False, fontsize=18, loc="upper right", borderpad=1.0)
-    plt.subplots_adjust(hspace=0.0)
-    ax.text(0.05, 0.95, process_title + "\n" r"$f_{rw}$ = %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=18)
-    filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
-    directory = f"../plots/{channel}"
-    if not os.path.exists(directory):
-      os.makedirs(directory)
-    print(f"{directory}/{filename}")
-    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
-
-def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins, ymin=1e-5, ymax=3e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True, colors = [], markers = [], units = ""):
-    if logx:
-        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
-        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
-        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
-    else:
-        axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
-        axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
-    if sel is None:
-        sel  = np.ones_like(weights_orig, dtype=bool)
-    fig, (ax, rax) = plt.subplots(nrows=2,
-                        ncols=1,
-                        figsize=(8,8),
-                        gridspec_kw={"height_ratios": (3, 1)},
-                        sharex=True)
-    h_orig = hist.Hist(
-        axis_o,
-        storage=hist.storage.Weight(), )
-    h_orig.fill(obs, weight = weights_orig[sel])
-    h_orig = h_orig/h_orig.sum(flow=False).value
-    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
-
-    for i, df in enumerate(dfs):
-        cfrac = find_nearest(df["fraction"], rwFrac)
-        if(len(np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())) != len(sel)):
-            print("nothing matching the fraction")
-            print(cfrac, df["fraction"], rwFrac)
-            continue
-        weights = np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())[sel]
-        h = hist.Hist(
-            axis_rw,
-            storage=hist.storage.Weight(), 
-        )
-        h.fill(obs, weight = weights)
-        #### Normalize hists
-        h = h/h.sum(flow=False).value
-        bin_centers = h.axes[0].centers
-        bin_edges = h.axes[0].edges
-        ratio, ratio_unc = get_ratio_unc(h, h_orig)
-        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
-        hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
-        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8, fillstyle="full")
-        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8, fillstyle="full")
-
-    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original")
-    configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str)
-    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
-    rax.set_ylim(raxlim[0], raxlim[1])
-    rax.set_xlim(xmin, xmax)
-    if logy:
-        ax.set_yscale('log')
-    if logx:
-        ax.set_xscale('log')
-
-    ax.set_ylim(ymin, ymax)
-    ax.set_xlim(xmin, xmax)
-    ax.legend(frameon=False, fontsize=12, loc="upper right", borderpad=1.0)
-    plt.subplots_adjust(hspace=0.0)
-    ax.text(0.05, 0.95, process_title + "\nReweight fraction: %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
-    filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
-    directory = f"../plots/{channel}"
-    if not os.path.exists(directory):
-      os.makedirs(directory)
-    print(f"{directory}/{filename}")
-    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
-
-
+    
 def sigmoid(x ,L, x0, k):
     y = L / (1 + np.exp(-k*(x-x0)))
     return (y)
@@ -343,12 +125,266 @@ def richards_x_at_y(y, x0, k, nu, L):
         return np.nan
     return x0 - (1.0 / k) * np.log(arg)
 
-def plot_radii(rw_dicts, directory, comparison, comparisonDict, colors, markers, strings):
+def removeTitleDuplication(strings):
+    histlabels = []
+    testStrings = ["EMD", "Z+jets", r"$t\bar{t}$", "HAD"]
+    for testString in testStrings:
+        isConsistent = True
+        for title in strings:
+            if title.find(testString) < 0:
+                isConsistent = False
+        if isConsistent:
+            for i, title in enumerate(strings):
+                strings[i] = strings[i].replace(testString, "")
+            histlabels.append(testString)
+            
+    return strings, histlabels
+
+def configure_axis(axis, xlabel, ylabel, fontsizeX = 16, fontsizeY = 16, yaxisAlignment = "top"):
+    axis.set_xlabel(xlabel, fontsize=fontsizeX, loc="right", multialignment='center',labelpad=14)
+    axis.set_ylabel(ylabel, fontsize=fontsizeY, loc=yaxisAlignment, multialignment='center',labelpad=14)
+    axis.minorticks_on()
+    axis.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
+    axis.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
+
+def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel = None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False, process_title = "", units="", maxNHists = 6):
+    cmap  = ["magenta", "red", "blue", "gold", "lime"]
+    markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', 'd', '1', '2', '3']
+
+    if sel is None:
+        sel  = np.ones_like(weights_orig, dtype=bool)
+    if logx:
+        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
+        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
+        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
+    else:
+        axis_o = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
+        axis_rw = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
+    sel_weights = weights_orig[sel]
+
+    fig, (ax, rax) = plt.subplots(nrows=2,
+                            ncols=1,
+                            figsize=(8,8),
+                            gridspec_kw={"height_ratios": (3, 1)},
+                            sharex=True)
+
+    h_orig = hist.Hist(
+            axis_o,
+            storage=hist.storage.Weight(), 
+        )
+    h_orig.fill(obs, weight = sel_weights)
+    h_orig = h_orig/h_orig.sum(flow=False).value
+    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
+    cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(df["radius"]))))
+
+    # We don't want to plot everything if there are too many numbers
+    delta = 1
+    if(len( df["radius"].values) > maxNHists):
+        delta  = int( len( df["radius"].values) / maxNHists)
+
+    for i, R in enumerate(df["radius"].values):
+        if i%delta != 0:
+            continue
+        weights = np.array(df.loc[df["radius"]==R, "weights"].squeeze())[sel]
+        frac = df.loc[df["radius"]==R, "fraction"].iloc[0]
+        h = hist.Hist(
+            axis_rw,
+            storage=hist.storage.Weight(), 
+        )
+        h.fill(obs, weight = weights)
+        #### Normalize hists
+        h = h/h.sum(flow=False).value
+        bin_centers = h.axes[0].centers
+        bin_edges = h.axes[0].edges
+        ratio, ratio_unc = get_ratio_unc(h, h_orig)
+        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
+
+        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i], markersize=8 )
+
+        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i], yerr=False, markersize=8 )
+    hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = False, color='black')
+
+    ax.set_xlabel(None)
+    ax.legend(frameon=False)
+    ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
+
+    rax.set_ylim(raxlim[0], raxlim[1])
+    rax.set_xlim(xmin, xmax)
+    if logy:
+        ax.set_yscale('log')
+    if logx:
+        ax.set_xscale('log')
+    ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin, xmax)
+    configure_axis(ax, "",  r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsizeY=24)
+    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original")
+    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
+    ax.legend(frameon=False)
+    plt.subplots_adjust(hspace=0)
+    filename = clean_filename(f"{title}_{obs_title}")
+    directory = f"../plots/{channel}"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+    plt.show()
+
+def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, title="", channel = "Zjets", rwFrac = 0.5, obsName = ""):
+    logy= obs["logy"]
+    xmin = obs["xmin"]
+    xmax = obs["xmax"]
+    nbins = obs["numbins"]
+    sel = obs["sel"]
+
+    if obs["logx"]:
+        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
+        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
+        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
+    else:
+        axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+        axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+    if sel is None:
+        sel  = np.ones_like(weights_orig, dtype=bool)
+    fig, (ax, rax) = plt.subplots(nrows=2,
+                        ncols=1,
+                        figsize=(8,8),
+                        gridspec_kw={"height_ratios": (3, 1)},
+                        sharex=True)
+    h_orig = hist.Hist(
+        axis_o,
+        storage=hist.storage.Weight(), )
+    h_orig.fill(obs["obs"], weight = weights_orig[sel])
+    h_orig = h_orig/h_orig.sum(flow=False).value
+    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
+
+    strings = []
+    for i, data in enumerate(dataset):
+        strings.append(data["title"])
+    strings, histlabels = removeTitleDuplication(strings)
+
+    for i, data in enumerate(dataset):
+        cfrac = find_nearest(data["df"]["fraction"], rwFrac)
+        if(len(np.array(data["df"].loc[data["df"]["fraction"]==cfrac, "weights"].squeeze())) != len(sel)):
+            print("nothing matching the fraction")
+            print(cfrac, data["df"]["fraction"], rwFrac)
+            continue
+        weights = np.array(data["df"].loc[data["df"]["fraction"]==cfrac, "weights"].squeeze())[sel]
+        h = hist.Hist(
+            axis_rw,
+            storage=hist.storage.Weight(), 
+        )
+        h.fill(obs["obs"], weight = weights)
+        #### Normalize hists
+        h = h/h.sum(flow=False).value
+        bin_centers = h.axes[0].centers
+        bin_edges = h.axes[0].edges
+        ratio, ratio_unc = get_ratio_unc(h, h_orig)
+        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
+        hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
+        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=data["color"], histtype='errorbar', yerr = False, marker=data["marker"], markersize=8, fillstyle="full")
+        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=data["color"], histtype='errorbar', yerr= False, marker=data["marker"], markersize=8, fillstyle="full")
+
+    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
+    rax.set_ylim(obs["ratioLim"][0], obs["ratioLim"][1])
+    rax.set_xlim(xmin, xmax)
+    if logy:
+        ax.set_yscale('log')
+    if obs["logx"]:
+        ax.set_xscale('log')
+    ax.set_ylim(obs["ymin"], obs["ymax"])
+    ax.set_xlim(xmin, xmax)
+    configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs["name"], fontsizeY=24)
+    configure_axis(rax, rf"${obs["name"]} \ {obs["units"]}$", "Ratio to Original", fontsizeX = 20, yaxisAlignment = "center")
+    ax.legend(frameon=False, fontsize=18, loc="upper right", borderpad=1.0)
+    plt.subplots_adjust(hspace=0.0)
+    ax.text(0.05, 0.95, process_title + "\n" r"$f_{rw}$ = %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=18)
+    filename = clean_filename(f"{title}_{obsName}_{rwFrac}")
+    directory = f"../plots/{channel}"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+
+def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins, ymin=1e-5, ymax=3e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True, colors = [], markers = [], units = ""):
+    if logx:
+        bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
+        axis_o = hist.axis.Variable(bins,name="data",label="orig",)
+        axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
+    else:
+        axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+        axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+    if sel is None:
+        sel  = np.ones_like(weights_orig, dtype=bool)
+    fig, (ax, rax) = plt.subplots(nrows=2,
+                        ncols=1,
+                        figsize=(8,8),
+                        gridspec_kw={"height_ratios": (3, 1)},
+                        sharex=True)
+    h_orig = hist.Hist(
+        axis_o,
+        storage=hist.storage.Weight(), )
+    h_orig.fill(obs, weight = weights_orig[sel])
+    h_orig = h_orig/h_orig.sum(flow=False).value
+    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
+
+    for i, df in enumerate(dfs):
+        cfrac = find_nearest(df["fraction"], rwFrac)
+        if(len(np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())) != len(sel)):
+            print("nothing matching the fraction")
+            print(cfrac, df["fraction"], rwFrac)
+            continue
+        weights = np.array(df.loc[df["fraction"]==cfrac, "weights"].squeeze())[sel]
+        h = hist.Hist(
+            axis_rw,
+            storage=hist.storage.Weight(), 
+        )
+        h.fill(obs, weight = weights)
+        #### Normalize hists
+        h = h/h.sum(flow=False).value
+        bin_centers = h.axes[0].centers
+        bin_edges = h.axes[0].edges
+        ratio, ratio_unc = get_ratio_unc(h, h_orig)
+        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
+        hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
+        hep.histplot(ratio, bins=bin_edges, ax=rax,  color=colors[i], histtype='errorbar', yerr = False, marker=markers[i], markersize=8, fillstyle="full")
+        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=colors[i], histtype='errorbar', yerr= False, marker=markers[i], markersize=8, fillstyle="full")
+
+    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original")
+    configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str)
+    ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
+    rax.set_ylim(raxlim[0], raxlim[1])
+    rax.set_xlim(xmin, xmax)
+    if logy:
+        ax.set_yscale('log')
+    if logx:
+        ax.set_xscale('log')
+
+    ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin, xmax)
+    ax.legend(frameon=False, fontsize=12, loc="upper right", borderpad=1.0)
+    plt.subplots_adjust(hspace=0.0)
+    ax.text(0.05, 0.95, process_title + "\nReweight fraction: %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
+    filename = clean_filename(f"{title}_{obs_title}_{rwFrac}")
+    directory = f"../plots/{channel}"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+
+
+def plot_radii(dataset, directory, comparison, comparisonDict, process_title = ""):
+    fig, ax = plt.subplots()
     maxCellRadius = comparisonDict[comparison]["maxCellRadius"]
-    for i, df in enumerate(rw_dicts):
-        frac = df["fraction"].values
-        radii = df["radius"].values
-        plt.scatter(radii, frac, color=colors[i], label = strings[i], marker=markers[i])
+    strings = []
+    for i, data in enumerate(dataset):
+        strings.append(data["title"])
+    strings, histlabels = removeTitleDuplication(strings)
+    print(strings)
+
+    
+    for i, data in enumerate(dataset):
+        frac = data["df"]["fraction"].values
+        radii = data["df"]["radius"].values
+        ax.scatter(radii, frac, color=data["color"], label = strings[i], marker=data["marker"])
         popt, pcov = fit_richards(radii, frac)
         x = np.arange(-5,np.max(radii)*1.5)
         if(max(radii) < 20):
@@ -359,18 +395,14 @@ def plot_radii(rw_dicts, directory, comparison, comparisonDict, colors, markers,
         print(f"{strings[i]} R for {frac} RW ", round(richards_x_at_y(frac, *popt), 3))
         frac=0.25
         print(f"{strings[i]} R for {frac} RW ", round(richards_x_at_y(frac, *popt), 3))
-        plt.plot(x, richards(x, *popt), color=colors[i], linestyle='-')
+        ax.plot(x, richards(x, *popt), color=data["color"], linestyle='-')
 
-    plt.xlabel("Max cell radius", fontsize=14, loc="right")
-    plt.minorticks_on()
+    ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=14)
     plt.xlim(0, maxCellRadius+(maxCellRadius/2))
-    plt.tick_params(axis="both", which="major", direction='in', length=8, top=True, right=True, bottom=True, left=True, labelsize=12)
-    plt.tick_params(axis="both", which="minor", direction='in', length=4, top=True, right=True, bottom=True, left=True, labelsize=12) 
-    #configure_axis(plt, "Max cell radius", r"$f_{rw}$")
-    plt.ylabel(r"$f_{rw}$", fontsize=14, loc="top")
+    configure_axis(ax, "Max cell radius", r"$f_{rw}$")
     plt.ylim(0, 1)
     plt.legend(frameon=False, fontsize=14, loc="lower right", borderpad=1.0)
-    filename = clean_filename(f"radius_{comparison}")
+    filename = clean_filename(f"radii_{comparison}")
     directory = f"../plots/radius"
     if not os.path.exists(directory):
       os.makedirs(directory)
@@ -378,29 +410,80 @@ def plot_radii(rw_dicts, directory, comparison, comparisonDict, colors, markers,
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
     plt.clf()
 
-
-def make_df(radii, weights_orig, inputpath0, inputpath1 = "gev_bigR.npy", points = "None"):
-    weights = []
-    for R in radii:
-        str_R = str(R).replace(".", "p")
-        weight = np.load(inputpath0+str_R+inputpath1)
-        if type(points)!=str:
-            weight = fix_weight_length(points, weight, weights_orig)
-        weights.append(weight)
-    fracs = get_fracs(radii, weights, weights_orig)
-    df = pd.DataFrame({
-        "radius": radii,
-        "fraction": fracs,
-        "weights": weights
-    })
-    return df
+def plot_dilution(neg_percents, dilutions, dataset, title, process_title = ""):
+    fig, ax = plt.subplots()
+    strings = []
+    for i, data in enumerate(dataset):
+        strings.append(data["title"])
+    strings, histlabels = removeTitleDuplication(strings)
     
-def fix_weight_length(points, weights, weights_orig):
-    mask = np.all(points == 0, axis=(1, 2))
-    if len(weights) != len(weights_orig):
-        rw_weights = weights_orig.copy()
-        print("Masking out zero values to fix different lengths: ", mask.shape, rw_weights.shape, weights.shape)
-        rw_weights[~mask] = weights
-        return rw_weights
-    else:
-        return weights
+    for neg_percent, dilution, data, label in zip(neg_percents, dilutions, dataset, strings):
+        ax.plot(neg_percent, dilution, color = data["color"], marker = data["marker"], label = label, linestyle = '--')
+
+    plt.xlim(0, 1)
+    
+    configure_axis(ax, r"$f_{rw}$", r"$f_{ESS}$")
+    ax.legend(frameon=False, fontsize=14, loc="lower left", borderpad=1.0)
+    plt.axhline(1, color = 'black', linestyle = '--', label = 'Fully positive, uniform sample')
+    ax.text(0.85, 0.95, process_title, transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontsize=14)
+
+    
+    filename = clean_filename(f"dilution_{title}")
+    directory = f"../plots/dilution"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+    plt.clf()
+
+def plot_variance(neg_percents, variances, dataset, title, process_title = ""):
+    fig, ax = plt.subplots()
+    strings = []
+    for i, data in enumerate(dataset):
+        strings.append(data["title"])
+    strings, histlabels = removeTitleDuplication(strings)
+    
+    for neg_percent, variance, data, label in zip(neg_percents, variances, dataset, strings):
+        ax.plot(neg_percent, variance, color = data["color"], marker = data["marker"], label = label, linestyle = '--')
+
+    plt.xlim(0, 1)
+    
+    configure_axis(ax, r"$f_{rw}$", r"$f_{ESS}$")
+    ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=14)
+    ax.legend(frameon=False, fontsize=14, loc="lower left", borderpad=1.0)
+    plt.axhline(0, color = 'black', linestyle = '--', label = 'Fully positive, uniform sample')
+
+    filename = clean_filename(f"variance_{title}")
+    directory = f"../plots/dilution"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+        
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+    plt.clf()
+
+
+def plot_xmd(fractions, dataset, title, process_title = ""):
+    fig, ax = plt.subplots()
+    strings = []
+    for i, data in enumerate(dataset):
+        strings.append(data["title"])
+    strings, histlabels = removeTitleDuplication(strings)
+    
+    for fraction, data, label in zip(fractions, dataset, strings):
+        ax.plot(fraction, data['xmd'], color = data['color'], marker = data['marker'], label = label, linestyle = '--')
+
+    plt.xlim(0, 1)
+
+    configure_axis(ax, r"$f_{rw}$", r"$\Sigma MD$ [pb]")
+    ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=14)
+    ax.legend(frameon=False, fontsize=14, loc="upper left", borderpad=1.4)
+
+    filename = clean_filename(f"xmd_{title}")
+    directory = f"../plots/XMDs"
+    if not os.path.exists(directory):
+      os.makedirs(directory)
+    print(f"{directory}/{filename}")
+    plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+    plt.clf()
+
