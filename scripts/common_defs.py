@@ -59,7 +59,7 @@ rjainDir = "/oscar/data/mleblan6/rjain"
 #rjainDir = "/Users/jroloff/Work/cellReweighting/plotting/cres-distance"
 lhayDir = "/oscar/data/mleblan6/lhay"
 #lhayDir = "/Users/jroloff/Work/cellReweighting/plotting/cres-distance"
-jmarrinanDir = "/oscar/data/mleblan6/lhay"
+jmarrinanDir = "/oscar/data/mleblan6/jmarrinan"
 #jmarrinanDir = "/Users/jroloff/Work/cellReweighting/plotting/cres-distance"
 
 with open(rjainDir + "/jeppe/radii.txt") as f:
@@ -69,11 +69,11 @@ dataFrames = {}
 weights_orig_z = np.load(rjainDir + "/ppzjj_100k/weight_100k.npy")
 
 ###ttbar xmds
-ps_ttbar_xmd_dist = np.load(lhayDir + '/users/lhay/cres-distance/XMD_scripts/ttbar_100k_xmd_ps.npy')
-had_ttbar_xmd_dist = np.load(lhayDir + '/users/lhay/cres-distance/XMD_scripts/ttbar_100k_xmd_had.npy')
-hp_ttbar_xmd_dist = np.load(lhayDir + '/users/lhay/cres-distance/XMD_scripts/ttbar_100k_xmd_hp.npy')
+ps_ttbar_xmd_dist = np.load(lhayDir + '/xmd_outputs/ttbar_100k_xmd_ps.npy')
+had_ttbar_xmd_dist = np.load(lhayDir + '/xmd_outputs/ttbar_100k_xmd_had.npy')
+hp_ttbar_xmd_dist = np.load(lhayDir + '/xmd_outputs/ttbar_100k_xmd_hp.npy')
 jeppe_xmd = np.load(rjainDir + "/hundredK_XMD/jeppe_XMD.npy")
-jeppe_xmd_ttbar = np.load(rjainDir + "/hundredK_XMD/jeppe_XMD.npy")
+jeppe_xmd_ttbar = np.load(rjainDir + "/hundredK_XMD/ttbar_jeppe_XMD.npy")
 
 ##### Load jets
 hp_points = np.load(rjainDir + "/ppzjj_100k/hardprocess_points.npy")

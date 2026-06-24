@@ -13,4 +13,4 @@ source /users/lhay/negweights/bin/activate
 echo "Starting job $SLURM_ARRAY_TASK_ID on $HOSTNAME"
 
 #Run python script
-python3 -u xmd_calc.py --jeppe --output="zjet_100k_xmd_ANDERSON.npy"
+python3 -u xmd_calc.py --jeppe --ttbar --output="ttbar_100k_xmd_ANDERSON.npy"

@@ -293,7 +293,7 @@ def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, titl
     ax.set_ylim(obs["ymin"], obs["ymax"])
     ax.set_xlim(xmin, xmax)
     configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs["name"], fontsizeY=24)
-    configure_axis(rax, rf"${obs["name"]} \ {obs["units"]}$", "Ratio to Original", fontsizeX = 20, yaxisAlignment = "center")
+    configure_axis(rax, rf"${obs['name']} \ {obs['units']}$", "Ratio to Original", fontsizeX = 20, yaxisAlignment = "center")
     ax.legend(frameon=False, fontsize=18, loc="upper right", borderpad=1.0)
     plt.subplots_adjust(hspace=0.0)
     ax.text(0.05, 0.95, process_title + "\n" r"$f_{rw}$ = %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=18)
