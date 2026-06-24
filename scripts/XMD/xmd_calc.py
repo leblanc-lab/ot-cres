@@ -288,7 +288,10 @@ def main():
         )
     print("initialized xmd computer class")
 
-    if args.jeppe==True:
+    if args.jeppe==True and args.ttbar==True:
+        radii = np.logspace(np.log10(50),np.log10(500),50)
+        reweights = np.load("/oscar/data/mleblan6/rjain/jeppe/ttbar_jeppe_reweights.npy")
+    elif args.jeppe==True and args.ttbar==False:
         radii = np.logspace(np.log10(50),np.log10(500),50)
         reweights = np.load("/oscar/data/mleblan6/rjain/jeppe/jeppe_reweights.npy")
         
