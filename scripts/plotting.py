@@ -127,16 +127,17 @@ def richards_x_at_y(y, x0, k, nu, L):
 
 def removeTitleDuplication(strings):
     histlabels = []
-    testStrings = ["EMD", "Z+jets", r"$t\bar{t}$", "HAD"]
+    testStrings = ["EMD ", "Z+jets ", r"$t\bar{t}$ ", "HAD ", r"$\beta=1$"]
     for testString in testStrings:
         isConsistent = True
         for title in strings:
             if title.find(testString) < 0:
                 isConsistent = False
         if isConsistent:
-            for i, title in enumerate(strings):
-                strings[i] = strings[i].replace(testString, "")
-            histlabels.append(testString)
+            if not (testString == r"$\beta=1$" and ("Z+jets " in histlabels or r"$t\bar{t}$ " in histlabels)):
+                for i, title in enumerate(strings):
+                    strings[i] = strings[i].replace(testString, "")
+                histlabels.append(testString)
             
     return strings, histlabels
 
@@ -293,8 +294,10 @@ def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, titl
     ax.set_ylim(obs["ymin"], obs["ymax"])
     ax.set_xlim(xmin, xmax)
     configure_axis(ax, "", r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs["name"], fontsizeY=24)
-    configure_axis(rax, rf"${obs['name']} \ {obs['units']}$", "Ratio to Original", fontsizeX = 20, yaxisAlignment = "center")
-    ax.legend(frameon=False, fontsize=18, loc="upper right", borderpad=1.0)
+    name = obs["name"]
+    units = obs["units"]
+    configure_axis(rax, rf"${name} \ {units}$", "Ratio to Original", fontsizeX = 20, yaxisAlignment = "center")
+    leg = ax.legend(frameon=False, fontsize=15, loc="upper right", borderpad=0.6)
     plt.subplots_adjust(hspace=0.0)
     ax.text(0.05, 0.95, process_title + "\n" r"$f_{rw}$ = %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=18)
     filename = clean_filename(f"{title}_{obsName}_{rwFrac}")
@@ -303,6 +306,7 @@ def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, titl
       os.makedirs(directory)
     print(f"{directory}/{filename}")
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
+    return ax, leg
 
 def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins, ymin=1e-5, ymax=3e0, obs_str = "", obs_title = "", process_title = "", sel=None, title="", raxlim=[0.85, 1.15], channel = "Zjets", rwFrac = 0.5, logx=False, logy=True, colors = [], markers = [], units = ""):
     if logx:
@@ -371,15 +375,13 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
 
 
-def plot_radii(dataset, directory, comparison, comparisonDict, process_title = ""):
+def plot_radii(dataset, directory, comparison, comparisonDict, process_title = "", maxX = 0):
     fig, ax = plt.subplots()
     maxCellRadius = comparisonDict[comparison]["maxCellRadius"]
     strings = []
     for i, data in enumerate(dataset):
         strings.append(data["title"])
     strings, histlabels = removeTitleDuplication(strings)
-    print(strings)
-
     
     for i, data in enumerate(dataset):
         frac = data["df"]["fraction"].values
@@ -398,12 +400,14 @@ def plot_radii(dataset, directory, comparison, comparisonDict, process_title = "
         ax.plot(x, richards(x, *popt), color=data["color"], linestyle='-')
 
     ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=14)
-    plt.xlim(0, maxCellRadius+(maxCellRadius/2))
+    if maxX == 0:
+        plt.xlim(0, maxCellRadius+(maxCellRadius/6.))
+    else:
+        plt.xlim(0, maxX)
     configure_axis(ax, "Max cell radius", r"$f_{rw}$")
     plt.ylim(0, 1)
     plt.legend(frameon=False, fontsize=14, loc="lower right", borderpad=1.0)
     filename = clean_filename(f"radii_{comparison}")
-    directory = f"../plots/radius"
     if not os.path.exists(directory):
       os.makedirs(directory)
     print(f"{directory}/{filename}")
@@ -422,7 +426,7 @@ def plot_dilution(neg_percents, dilutions, dataset, title, process_title = ""):
 
     plt.xlim(0, 1)
     
-    configure_axis(ax, r"$f_{rw}$", r"$f_{ESS}$")
+    configure_axis(ax, r"$f_{rw}$", r"$\frac{1}{f_{ESS}}$", fontsizeY = 24)
     ax.legend(frameon=False, fontsize=14, loc="lower left", borderpad=1.0)
     plt.axhline(1, color = 'black', linestyle = '--', label = 'Fully positive, uniform sample')
     ax.text(0.85, 0.95, process_title, transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontsize=14)
@@ -448,7 +452,7 @@ def plot_variance(neg_percents, variances, dataset, title, process_title = ""):
 
     plt.xlim(0, 1)
     
-    configure_axis(ax, r"$f_{rw}$", r"$f_{ESS}$")
+    configure_axis(ax, r"$f_{rw}$", r"Variance")
     ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=14)
     ax.legend(frameon=False, fontsize=14, loc="lower left", borderpad=1.0)
     plt.axhline(0, color = 'black', linestyle = '--', label = 'Fully positive, uniform sample')
@@ -463,21 +467,23 @@ def plot_variance(neg_percents, variances, dataset, title, process_title = ""):
     plt.clf()
 
 
-def plot_xmd(fractions, dataset, title, process_title = ""):
+def plot_xmd(fractions, dataset, title, cross_sections, process_title = "", ):
     fig, ax = plt.subplots()
     strings = []
     for i, data in enumerate(dataset):
         strings.append(data["title"])
     strings, histlabels = removeTitleDuplication(strings)
     
-    for fraction, data, label in zip(fractions, dataset, strings):
-        ax.plot(fraction, data['xmd'], color = data['color'], marker = data['marker'], label = label, linestyle = '--')
+    for fraction, data, label, cross_section in zip(fractions, dataset, strings, cross_sections):
+        ax.plot(fraction, data['xmd']/cross_section, color = data['color'], marker = data['marker'], label = label, linestyle = data["line"])
 
     plt.xlim(0, 1)
+    plt.ylim(0)
 
-    configure_axis(ax, r"$f_{rw}$", r"$\Sigma MD$ [pb]")
-    ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=14)
-    ax.legend(frameon=False, fontsize=14, loc="upper left", borderpad=1.4)
+    configure_axis(ax, r"$f_{rw}$", r"$\Sigma MD$ / $\sigma$")
+    if len(histlabels) and (histlabels[0]).find("beta")<0:
+        ax.text(0.08, 0.95, histlabels[0], horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=14)
+    ax.legend(frameon=False, fontsize=14, loc="upper left", borderpad=1.7)
 
     filename = clean_filename(f"xmd_{title}")
     directory = f"../plots/XMDs"

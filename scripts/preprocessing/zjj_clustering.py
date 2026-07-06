@@ -10,7 +10,7 @@ file = uproot.open("/oscar/data/mleblan6/rjain/ppzjj_100k/ppzjj_NLO_100k.root")
 print('Opened root file')
 tree = file['Events']
 print(tree.keys())
-no_lep = True
+no_lep = False
 
 N = 100000
 particle_y_cut = 4.9
@@ -33,8 +33,8 @@ print(f'Max number of particles is: {maximum}')
 	#Make and save main coords of particles
 main_coords = np.zeros((N,maximum,4))
 for i in range(N):
+    pid = data[i]['Particle_pid']
     if no_lep:
-        pid = data[i]['Particle_pid']
         # e, nu_e, mu, nu_mu, tau, nu_tau
         lep_mask = ~((pid == 11) | (pid == 12) | (pid == 13) | (pid == 14) | (pid == 15) | (pid == 16))
         mask = (data[i]['Particle_status'] == 1) & lep_mask
@@ -92,7 +92,7 @@ hadronization_p_mass = sample[:,:,3]
 
 
 #do jet clustering
-jet_pt_cutoff = 20
+jet_pt_cutoff = 10
 jet_eta_cutoff = 4.5
 
 vector.register_awkward()
@@ -146,6 +146,6 @@ alljets_coords = ak.zip({'pt': jet_pt, 'eta': jet_eta, 'phi': jet_phi, 'mass':je
 
 print('Finished coordinate transformation!') 
 if no_lep:
-    ak.to_parquet(alljets_coords, '/oscar/data/mleblan6/lhay/zjj_NLO_100k_eta4p5_NOLEP.parquet')
+    ak.to_parquet(alljets_coords, f'/oscar/data/mleblan6/lhay/zjj_NLO_100k_eta4p5_pt{jet_pt_cutoff}_NOLEP.parquet')
 else:
-    ak.to_parquet(alljets_coords, '/oscar/data/mleblan6/lhay/zjj_NLO_100k_eta4p5.parquet')
+    ak.to_parquet(alljets_coords, f'/oscar/data/mleblan6/lhay/zjj_NLO_100k_eta4p5_pt{jet_pt_cutoff}.parquet')
