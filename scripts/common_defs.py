@@ -73,7 +73,16 @@ ps_ttbar_xmd_dist = np.load(lhayDir + '/xmd_outputs/ttbar_100k_xmd_ps.npy')
 had_ttbar_xmd_dist = np.load(lhayDir + '/xmd_outputs/ttbar_100k_xmd_had.npy')
 hp_ttbar_xmd_dist = np.load(lhayDir + '/xmd_outputs/ttbar_100k_xmd_hp.npy')
 jeppe_xmd = np.load(rjainDir + "/hundredK_XMD/jeppe_XMD.npy")
-jeppe_xmd_ttbar = np.load(rjainDir + "/hundredK_XMD/jeppe_XMD.npy")
+jeppe_xmd_ttbar = np.load(rjainDir + "/hundredK_XMD/ttbar_jeppe_XMD.npy")
+#### no ttbar for V1
+jeppe_xmdV1 = np.load(rjainDir + "/jeppe_new/zjj_jeppe_NEW_XMD.npy")
+jeppe_xmd_ttbarV1 = np.load(lhayDir+ "/xmd_outputs/ttbar_jeppe_NEW_v2_XMD.npy")
+#### zjj not finished for V2
+jeppe_xmdV2 = np.load(rjainDir + "/jeppe_new_v2/zjj_jeppe_NEW_v2_XMD.npy")
+jeppe_xmd_ttbarV2 = np.load(lhayDir + "/xmd_outputs/ttbar_jeppe_NEW_v2_XMD.npy")
+
+jeppe_xmdV3 = np.load(lhayDir + "/xmd_outputs/zjj_jeppe_NEW_v3_XMD.npy")
+jeppe_xmd_ttbarV3 = np.load(lhayDir + "/xmd_outputs/ttbar_jeppe_NEW_v3_XMD.npy")
 
 ##### Load jets
 hp_points = np.load(rjainDir + "/ppzjj_100k/hardprocess_points.npy")
@@ -124,8 +133,8 @@ dataFrames["zjet_SEMD_cm"] = {"process": "Zjets", "df": zjet_SEMD_p2_hp_df,"xmd"
 #### Jeppe RW
 jeppe_rw = np.load(rjainDir + "/jeppe_new/zjj_jeppe_reweights.npy")
 fracs = get_fracs(zjj_radii, jeppe_rw, weight)
-zjet_jeppe_df = pd.DataFrame({"radius": zjj_radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
-dataFrames["zjet_jeppe_df"] = {"process": "Zjets", "df": zjet_jeppe_df, "xmd":jeppe_xmd,"title": "Z+jets Andersen $et$ $al.$", "color": colors[4], "marker": markers[4], "line": '--'}
+zjet_jeppeV1_df = pd.DataFrame({"radius": zjj_radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
+dataFrames["zjet_jeppeV1_df"] = {"process": "Zjets", "df": zjet_jeppeV1_df, "xmd":jeppe_xmdV1,"title": "Z+jets V1 Andersen $et$ $al.$", "color": colors[5], "marker": markers[5], "line": '--'}
 
 #### Jeppe RW OLD
 with open(rjainDir + "/jeppe/radii.txt") as f:
@@ -133,8 +142,20 @@ with open(rjainDir + "/jeppe/radii.txt") as f:
 exec(code)
 jeppe_rw = np.load(rjainDir + "/jeppe/jeppe_reweights.npy")
 fracs = get_fracs(radii, jeppe_rw, weight)
-zjet_jeppeOLD_df = pd.DataFrame({"radius": radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
-dataFrames["zjet_jeppeOLD_df"] = {"process": "Zjets", "df": zjet_jeppeOLD_df, "xmd":jeppe_xmd,"title": "Z+jets OLD Andersen $et$ $al.$", "color": colors[5], "marker": markers[5], "line": '--'}
+zjet_jeppeV0_df = pd.DataFrame({"radius": radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
+dataFrames["zjet_jeppeV0_df"] = {"process": "Zjets", "df": zjet_jeppeV0_df, "xmd":jeppe_xmd,"title": "Z+jets V0 Andersen $et$ $al.$", "color": colors[7], "marker": markers[7], "line": '--'}
+
+zjj_radii = np.logspace(1,np.log10(350),50)
+jeppe_rw = np.load(rjainDir + "/jeppe_new_v2/zjj_jeppe_reweights.npy")
+fracs = get_fracs(radii, jeppe_rw, weight)
+zjet_jeppeV2_df = pd.DataFrame({"radius": zjj_radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
+dataFrames["zjet_jeppeV2_df"] = {"process": "Zjets", "df": zjet_jeppeV2_df, "xmd":jeppe_xmdV2,"title": "Z+jets V2 Andersen $et$ $al.$", "color": colors[6], "marker": markers[6], "line": '--'}
+
+zjj_radii = np.logspace(0,np.log10(350),50)
+jeppe_rw = np.load(rjainDir + "/jeppe_new_v3/zjj_jeppe_reweights.npy")
+fracs = get_fracs(radii, jeppe_rw, weight)
+zjet_jeppeV3_df = pd.DataFrame({"radius": zjj_radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
+dataFrames["zjet_jeppeV3_df"] = {"process": "Zjets", "df": zjet_jeppeV3_df, "xmd":jeppe_xmdV3,"title": "Z+jets Andersen $et$ $al.$", "color": colors[4], "marker": markers[4], "line": '--'}
 
 ##### Rishabh SEMD RW's w/ p=1
 radii_hp = np.logspace(-5,-2,50)
@@ -160,7 +181,7 @@ dataFrames["zjet_SEMD_had_df"] = {"process": "Zjets", "df": zjet_SEMD_had_df, "x
 
 #### beta=0
 radii_b0 = np.logspace(1.5,3,50)
-b0_hp_rw = np.load(rjainDir + "/beta0/hardprocess_reweights_fixed.npy")
+b0_hp_rw = np.load(rjainDir + "/beta0/hardprocess_reweights_fixed.npy")*14456.19
 b0_hp_rw = np.array([fix_weight_length(hp_points, rw, weight) for rw in b0_hp_rw])
 #print(b0_hp_rw.shape)
 fracs = get_fracs(radii_b0, b0_hp_rw, weight)
@@ -168,13 +189,13 @@ zjet_b0_hp_df = pd.DataFrame({"radius": radii_b0[0:26], "fraction": fracs[0:26],
 hp_beta0_xmd_dist = np.load(rjainDir + '/hundredK_XMD/hp_beta0_XMD.npy')
 dataFrames["zjet_b0_hp_df"] = {"process": "Zjets", "df": zjet_b0_hp_df, "xmd":hp_beta0_xmd_dist,"title": r"Z+jets $\beta=0$ %s"%hpString, "marker": markers[4], "color":colors2[5], "line": '--'}
 
-b0_ps_rw = np.load(rjainDir + "/beta0/showered_reweights_fixed.npy")
+b0_ps_rw = np.load(rjainDir + "/beta0/showered_reweights_fixed.npy")*14456.19
 fracs = get_fracs(radii_b0, b0_ps_rw, weight)
 zjet_b0_ps_df = pd.DataFrame({"radius": radii_b0[0:29], "fraction": fracs[0:29], "weights": b0_ps_rw.tolist()[0:29]})
 sho_beta0_xmd_dist = np.load(rjainDir + '/hundredK_XMD/sho_beta0_XMD.npy')
 dataFrames["zjet_b0_ps_df"] = {"process": "Zjets", "df": zjet_b0_ps_df, "xmd":sho_beta0_xmd_dist,"title": r"Z+jets $\beta=0$ %s"%psString,"marker": markers[4], "color": colors2[5], "line": '--'}
 
-b0_had_rw = np.load(rjainDir + "/beta0_reorder/had_beta0_reweights.npy")
+b0_had_rw = np.load(rjainDir + "/beta0_reorder/had_beta0_reweights.npy")*14456.19
 radii_b0_had = np.logspace(np.log10(50), np.log10(350), 50)
 fracs = get_fracs(radii_b0_had, b0_had_rw, weight)
 zjet_b0_had_df = pd.DataFrame({"radius": radii_b0_had[0:40], "fraction": fracs[0:40], "weights": b0_had_rw[0:40].tolist()})
@@ -197,7 +218,7 @@ zjet_binf_ps_df = pd.DataFrame({"radius": radii_binf, "fraction": fracs, "weight
 sho_betainf_xmd_dist = np.load(rjainDir + '/hundredK_XMD/sho_betainf_XMD.npy')
 dataFrames["zjet_binf_ps_df"] = {"process": "Zjets", "df": zjet_binf_ps_df, "xmd":sho_betainf_xmd_dist,"title": r"Z+jets $\beta=\infty$ %s"%psString, "marker": markers[5], "color": colors2[6], "line": '--'}
 
-binf_had_rw = np.load(rjainDir + "/betainf/hadronization_reweights.npy")
+binf_had_rw = np.load(rjainDir + "/betainf/hadronization_reweights.npy")*14456.19
 fracs = get_fracs(radii_binf, binf_had_rw, weight)
 zjet_binf_had_df = pd.DataFrame({"radius": radii_binf, "fraction": fracs, "weights": binf_had_rw.tolist()})
 had_betainf_xmd_dist = np.load(rjainDir + '/hundredK_XMD/had_betainf_XMD.npy')
@@ -256,19 +277,35 @@ dataFrames["ttbar_ps_df"] = {"process": "TTbar", "df": ttbar_ps_df, "xmd":ps_ttb
 
 radii_had = [1, 18, 25, 28, 30, 50, 100]
 ttbar_had_df = make_df(radii_had[:-1], weights_orig_ttbar, lhayDir + "/reweighted_files/ttbar_had_100k/100k_had_emd_reweight_", "gev_ttbar.npy")
-print(ttbar_had_df['fraction'].values)
+print("TTbar frac values", ttbar_had_df['fraction'].values)
 dataFrames["ttbar_had_df"] = {"process": "TTbar", "df": ttbar_had_df, "xmd":had_ttbar_xmd_dist[:-1], "title": r"$t\bar{t}$ $\beta=1$ %s "%hadString, "color":colors[2], "marker": markers[2], "line": '-'}
-#dataFrames["ttbar_had_df"] = {"process": "TTbar", "df": ttbar_had_df, "title": r"$t\bar{t}$ %s "%hadString, "color":colors[2], "marker": markers[9]}
 
 #### Jeppe RW TTbar
-jeppe_rw = np.load(rjainDir + "/jeppe_new/ttbar_jeppe_reweights.npy")
+ttbar_radii = np.logspace(np.log10(200), 3, 50)
+jeppe_rw = np.load(rjainDir + "/jeppe/ttbar_jeppe_reweights.npy")*(678.620)
 fracs = get_fracs(ttbar_radii, jeppe_rw, weights_orig_ttbar)
+print("TTbar jeppe v0 frac values", fracs)
 ttbar_jeppe_df = pd.DataFrame({"radius": ttbar_radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
-dataFrames["ttbar_jeppe_df"] = {"process": "TTbar", "df": ttbar_jeppe_df, "xmd":jeppe_xmd_ttbar,"title": r"$t\bar{t}$ Andersen $et$ $al.$", "color": colors[4], "marker": markers[4], "line": '--'}
+dataFrames["ttbar_jeppeV0_df"] = {"process": "TTbar", "df": ttbar_jeppe_df, "xmd":jeppe_xmd_ttbar,"title": r"$t\bar{t}$ Andersen V0 $et$ $al.$", "color": colors[4], "marker": markers[4], "line": '--'}
+
+#### Jeppe RW TTbar
+ttbar_radii = np.logspace(np.log10(200),3,50)
+jeppe_rw = np.load(rjainDir + "/jeppe_new/ttbar_jeppe_reweights.npy")*14456.19
+fracs = get_fracs(ttbar_radii, jeppe_rw, weights_orig_ttbar)
+ttbar_jeppeV1_df = pd.DataFrame({"radius": ttbar_radii, "fraction": fracs, "weights": jeppe_rw.tolist()})
+dataFrames["ttbar_jeppeV1_df"] = {"process": "TTbar", "df": ttbar_jeppeV1_df, "xmd":jeppe_xmd_ttbarV1,"title": r"$t\bar{t}$ Andersen V1 $et$ $al.$", "color": colors[5], "marker": markers[5], "line": '--'}
+
 
 #### Newer Jeppe RW TTbar
 ttbar_radii = np.logspace(np.log10(125),3,50)
-jeppe_rwV2 = np.load(rjainDir + "/jeppe_new_v2/ttbar_jeppe_reweights.npy")
+jeppe_rwV2 = np.load(rjainDir + "/jeppe_new_v2/ttbar_jeppe_reweights.npy")*14456.19
 fracs = get_fracs(ttbar_radii, jeppe_rwV2, weights_orig_ttbar)
 ttbar_jeppeV2_df = pd.DataFrame({"radius": ttbar_radii, "fraction": fracs, "weights": jeppe_rwV2.tolist()})
-dataFrames["ttbar_jeppeV2_df"] = {"process": "TTbar", "df": ttbar_jeppeV2_df, "xmd":jeppe_xmd_ttbar,"title": r"V2 $t\bar{t}$ Andersen $et$ $al.$", "color": colors[5], "marker": markers[5], "line": '--'}
+dataFrames["ttbar_jeppeV2_df"] = {"process": "TTbar", "df": ttbar_jeppeV2_df, "xmd":jeppe_xmd_ttbarV2,"title": r"$t\bar{t}$ Andersen V2 $et$ $al.$", "color": colors[6], "marker": markers[6], "line": '--'}
+
+#### Newer Jeppe RW TTbar
+ttbar_radii = np.logspace(2,3,50)
+jeppe_rwV3 = np.load(rjainDir + "/jeppe_new_v3/ttbar_jeppe_reweights.npy")*14456.19
+fracs = get_fracs(ttbar_radii, jeppe_rwV3, weights_orig_ttbar)
+ttbar_jeppeV3_df = pd.DataFrame({"radius": ttbar_radii, "fraction": fracs, "weights": jeppe_rwV3.tolist()})
+dataFrames["ttbar_jeppeV3_df"] = {"process": "TTbar", "df": ttbar_jeppeV3_df, "xmd":jeppe_xmd_ttbarV3,"title": r"$t\bar{t}$ Andersen $et$ $al.$", "color": colors[7], "marker": markers[7], "line": '--'}

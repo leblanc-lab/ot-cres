@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -n 64                        # Number of cores
+#SBATCH -n 100                       # Number of cores
 #SBATCH --mem=600G                    # Memory per node
 #SBATCH -t 12:00:00                 # Time limit (hh:mm:ss)
 #SBATCH -J jeppe_XMD_%a           # Job name                  # Memory per node

@@ -148,10 +148,19 @@ def configure_axis(axis, xlabel, ylabel, fontsizeX = 16, fontsizeY = 16, yaxisAl
     axis.tick_params(axis="both", which="major", direction='in', length=10, top=True, right=True, bottom=True, left=True, labelsize=16)
     axis.tick_params(axis="both", which="minor", direction='in', length=5, top=True, right=True, bottom=True, left=True, labelsize=16)
 
-def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", obs_title = "", sel = None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets",raxlim=[0.85, 1.15], logx=False, process_title = "", units="", maxNHists = 6):
+def plot_same_rw_all(obs, df, weights_orig, obs_str = "", obs_title = "", sel = None, ymin=1e-4, ymax=1e0, logy=True, title="", channel="Zjets", logx=False, process_title = "", units="", maxNHists = 6, binwnorm=None):
     cmap  = ["magenta", "red", "blue", "gold", "lime"]
     markerStyles = ['s', 'o', 'v', '^', 'P', '*', 'x', 'd', '1', '2', '3']
-
+    logy= obs["logy"]
+    xmin = obs["xmin"]
+    xmax = obs["xmax"]
+    ymin = obs["ymin"]
+    ymax = obs["ymax"]
+    nbins = obs["numbins"]
+    sel = obs["sel"]
+    binwnorm = obs["binwnorm"]
+    name = obs["name"]
+    units = obs["units"]
     if sel is None:
         sel  = np.ones_like(weights_orig, dtype=bool)
     if logx:
@@ -159,8 +168,8 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         axis_o = hist.axis.Variable(bins,name="data",label="orig",)
         axis_rw = hist.axis.Variable(bins,name="data",label="reweighted",)
     else:
-        axis_o = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
-        axis_rw = hist.axis.Regular(numbins,xmin, xmax,name="data",label="orig",)
+        axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
+        axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
     sel_weights = weights_orig[sel]
 
     fig, (ax, rax) = plt.subplots(nrows=2,
@@ -173,9 +182,9 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
             axis_o,
             storage=hist.storage.Weight(), 
         )
-    h_orig.fill(obs, weight = sel_weights)
+    h_orig.fill(obs["obs"], weight = sel_weights)
     h_orig = h_orig/h_orig.sum(flow=False).value
-    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
+    hep.histplot(h_orig, ax=ax, label = "Original", color='black', binwnorm=binwnorm)
     cmap  = tuple(tuple(c) for c in plt.cm.plasma(np.linspace(0.1, 1.0, len(df["radius"]))))
 
     # We don't want to plot everything if there are too many numbers
@@ -192,24 +201,23 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
             axis_rw,
             storage=hist.storage.Weight(), 
         )
-        h.fill(obs, weight = weights)
+        h.fill(obs["obs"], weight = weights)
         #### Normalize hists
         h = h/h.sum(flow=False).value
         bin_centers = h.axes[0].centers
         bin_edges = h.axes[0].edges
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
-        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
 
-        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i], markersize=8 )
+        hep.histplot(ratio, bins=bin_edges, ax=rax, histtype='errorbar', yerr = False, marker=markerStyles[i%len(markerStyles)], color =cmap[i], markersize=8)
 
-        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i], yerr=False, markersize=8 )
-    hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = False, color='black')
+        hep.histplot(h, ax=ax, label = f"{round(frac*100)}% RW (R={round(R, 2)} GeV)", histtype='errorbar', marker=markerStyles[i%len(markerStyles)], color=cmap[i], yerr=False, markersize=8 , binwnorm=binwnorm)
+    hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, color='black', yerr=ratio_unc)
 
     ax.set_xlabel(None)
     ax.legend(frameon=False)
     ax.text(0.05, 0.95, process_title, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=16)
 
-    rax.set_ylim(raxlim[0], raxlim[1])
+    rax.set_ylim(obs["ratioLim"][0], obs["ratioLim"][1])
     rax.set_xlim(xmin, xmax)
     if logy:
         ax.set_yscale('log')
@@ -217,8 +225,8 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
         ax.set_xscale('log')
     ax.set_ylim(ymin, ymax)
     ax.set_xlim(xmin, xmax)
-    configure_axis(ax, "",  r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%obs_str, fontsizeY=24)
-    configure_axis(rax, rf"${obs_str} \ {units}$", "Ratio to Original")
+    configure_axis(ax, "",  r"$\frac{1}{\sigma}\frac{d\sigma}{d%s}$"%name, fontsizeY=24)
+    configure_axis(rax, rf"${name} \ {units}$", "Ratio to Original")
     ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
     ax.legend(frameon=False)
     plt.subplots_adjust(hspace=0)
@@ -229,13 +237,13 @@ def plot_same_rw_all(obs, df, weights_orig, numbins, xmin, xmax, obs_str = "", o
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
     plt.show()
 
-def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, title="", channel = "Zjets", rwFrac = 0.5, obsName = ""):
+def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, title="", channel = "Zjets", rwFrac = 0.5, obsName = "", binwnorm=None,logx=False, logy=True):
     logy= obs["logy"]
     xmin = obs["xmin"]
     xmax = obs["xmax"]
     nbins = obs["numbins"]
     sel = obs["sel"]
-
+    binwnorm = obs["binwnorm"]
     if obs["logx"]:
         bins = np.logspace(np.log10(xmin), np.log10(xmax), nbins)
         axis_o = hist.axis.Variable(bins,name="data",label="orig",)
@@ -253,9 +261,12 @@ def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, titl
     h_orig = hist.Hist(
         axis_o,
         storage=hist.storage.Weight(), )
+    bin_edges = h_orig.axes[0].edges
+    bin_widths = np.diff(bin_edges)
     h_orig.fill(obs["obs"], weight = weights_orig[sel])
     h_orig = h_orig/h_orig.sum(flow=False).value
-    hep.histplot(h_orig, ax=ax, label = "Original", color='black')
+    print("H_orig xs ", h_orig.sum(flow=False).value)
+    hep.histplot(h_orig, ax=ax, label = "Original", color='black', binwnorm=binwnorm)
 
     strings = []
     for i, data in enumerate(dataset):
@@ -275,14 +286,16 @@ def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, titl
         )
         h.fill(obs["obs"], weight = weights)
         #### Normalize hists
+        print(strings[i])
+        print("RW xs ", h.sum(flow=False).value)
+        print("RW xs /  678.6208346399999", h.sum(flow=False).value/(678))
         h = h/h.sum(flow=False).value
-        bin_centers = h.axes[0].centers
         bin_edges = h.axes[0].edges
+        bin_widths = np.diff(bin_edges)
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
-        ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
-        hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
+        hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc),  color='black')
         hep.histplot(ratio, bins=bin_edges, ax=rax,  color=data["color"], histtype='errorbar', yerr = False, marker=data["marker"], markersize=8, fillstyle="full")
-        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=data["color"], histtype='errorbar', yerr= False, marker=data["marker"], markersize=8, fillstyle="full")
+        hep.histplot(h, ax=ax, label = f"{strings[i]}", color=data["color"], histtype='errorbar', yerr= False, marker=data["marker"], markersize=8, fillstyle="full", binwnorm=binwnorm)
 
     ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
     rax.set_ylim(obs["ratioLim"][0], obs["ratioLim"][1])
@@ -300,6 +313,8 @@ def plot_diff_rw(obs, dataset, weights_orig,  process_title = "", sel=None, titl
     leg = ax.legend(frameon=False, fontsize=15, loc="upper right", borderpad=0.6)
     plt.subplots_adjust(hspace=0.0)
     ax.text(0.05, 0.95, process_title + "\n" r"$f_{rw}$ = %.2f"%(rwFrac), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes, fontsize=18)
+    for artist in rax.get_children():
+        artist.set_clip_on(True)
     filename = clean_filename(f"{title}_{obsName}_{rwFrac}")
     directory = f"../plots/{channel}"
     if not os.path.exists(directory):
@@ -344,8 +359,8 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
         h.fill(obs, weight = weights)
         #### Normalize hists
         h = h/h.sum(flow=False).value
-        bin_centers = h.axes[0].centers
         bin_edges = h.axes[0].edges
+        bin_widths = np.diff(bin_edges)
         ratio, ratio_unc = get_ratio_unc(h, h_orig)
         ratio1, ratio_unc1 = get_ratio_unc(h_orig, h_orig)
         hep.histplot(np.ones_like(ratio), bins=bin_edges, ax=rax, yerr = np.sqrt(ratio_unc1),  color='black')
@@ -420,25 +435,43 @@ def plot_dilution(neg_percents, dilutions, dataset, title, process_title = ""):
     for i, data in enumerate(dataset):
         strings.append(data["title"])
     strings, histlabels = removeTitleDuplication(strings)
-    
+
+    fit_results = {}
     for neg_percent, dilution, data, label in zip(neg_percents, dilutions, dataset, strings):
-        ax.plot(neg_percent, dilution, color = data["color"], marker = data["marker"], label = label, linestyle = '--')
+        # scatter the data points
+        ax.plot(neg_percent, dilution, color=data["color"], marker=data["marker"],
+                label=label, linestyle='none')
 
+        # linear fit: 1/f_ESS = m * f_rw + b
+        x = np.asarray(neg_percent, dtype=float)
+        y = np.asarray(dilution, dtype=float)
+        coeffs, cov = np.polyfit(x, y, 1, cov=True)
+        m, b = coeffs
+        m_err, b_err = np.sqrt(np.diag(cov))
+        fit_results[label] = (m, b, m_err, b_err)
+        print(f"{label}: 1/f_ESS = {m:.4f}*f_rw + {b:.4f}  "
+              f"(m_err={m_err:.4f}, b_err={b_err:.4f})")
+        xfit = np.linspace(x.min(), x.max(), 200)
+        ax.plot(xfit, np.polyval(coeffs, xfit), color=data["color"], linestyle='--')
+        print(f"For 0.25 RW, new stat cost is {m*0.25+b}, corresponding to {1-(m*0.25+b)/b}")
+        print(f"For 0.5 RW, new stat cost is {m*0.5+b}, corresponding to {1-(m*0.5+b)/b}")
+        print(f"For total RW, new stat cost is {m*1.0+b}, corresponding to {1-(m*1.0+b)/b}")
     plt.xlim(0, 1)
-    
-    configure_axis(ax, r"$f_{rw}$", r"$\frac{1}{f_{ESS}}$", fontsizeY = 24)
-    ax.legend(frameon=False, fontsize=14, loc="lower left", borderpad=1.0)
-    plt.axhline(1, color = 'black', linestyle = '--', label = 'Fully positive, uniform sample')
-    ax.text(0.85, 0.95, process_title, transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontsize=14)
 
-    
+    configure_axis(ax, r"$f_{rw}$", r"$\frac{1}{f_{ESS}}$", fontsizeY=24)
+    ax.legend(frameon=False, fontsize=14, loc="lower left", borderpad=1.0)
+    plt.axhline(1, color='black', linestyle='--', label='Fully positive, uniform sample')
+    ax.text(0.85, 0.95, process_title, transform=ax.transAxes,
+            horizontalalignment='right', verticalalignment='top', fontsize=14)
+
     filename = clean_filename(f"dilution_{title}")
     directory = f"../plots/dilution"
     if not os.path.exists(directory):
-      os.makedirs(directory)
+        os.makedirs(directory)
     print(f"{directory}/{filename}")
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
     plt.clf()
+    return fit_results
 
 def plot_variance(neg_percents, variances, dataset, title, process_title = ""):
     fig, ax = plt.subplots()
@@ -491,5 +524,3 @@ def plot_xmd(fractions, dataset, title, cross_sections, process_title = "", ):
       os.makedirs(directory)
     print(f"{directory}/{filename}")
     plt.savefig(f"{directory}/{filename}.pdf", bbox_inches='tight')
-    plt.clf()
-
