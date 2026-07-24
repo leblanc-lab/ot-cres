@@ -1,1 +1,1 @@
-Scripts for Jeppe metric, beta 0, and beta infinity
+The Jeppe_distmatrix script takes in a .h5 upper triangular distance matrix, symmatrizes it, and keeps only the rows corresponding to negative events. The betainf script constructs the EMD distance matrix for beta=infinity. The beta0 script does reweighting for EMD distance matrix for beta=0. Events are reordered by increasing hT prior to reweighting. 
