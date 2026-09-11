@@ -1,6 +1,6 @@
 {
   "title": "ot-cres: optimal-transport-based cell resampling for negative event weights",
-  "description": "<p>Code accompanying <em>Optimal-Transport-Based Cell Resampling for Negative and Pathological Event Weights</em> (arXiv:2607.08723). Cell resampling of negatively weighted Monte Carlo events using the Energy Mover's Distance and its spectral variant as the metric, plus the Cross-Section Mover's Distance (XMD) as an unbinned measure of reweighting bias. Supported by the U.S. Department of Energy, Office of Science, Office of High Energy Physics under Award Number DE-SC0026285, and by the National Science Foundation under Cooperative Agreement PHY-2019786 (IAIFI).</p>",
+  "description": "<p><strong>ot-cres</strong> is the code accompanying the paper <em>Optimal-Transport-Based Cell Resampling for Negative and Pathological Event Weights</em> (<a href=\"https://arxiv.org/abs/2607.08723\">arXiv:2607.08723</a>, hep-ph). It implements cell resampling of negatively weighted Monte Carlo events: each negative-weight event seeds a cell that grows to include its nearest neighbours in a metric space until the summed weight is positive, and the weights in the cell are then rescaled to be non-negative while preserving the total cross section.</p><p>The repository provides: (1) preprocessing of MadGraph/Pythia <code>.root</code> and <code>.hepmc</code> samples into per-event particle arrays at the hard-process, showered and hadron levels; (2) vantage-point-tree construction using the Energy Mover's Distance (EMD) with configurable &beta;; (3) cell reweighting with the vp-tree or by brute force from a precomputed distance matrix; (4) computation of spectral EMD (SEMD) distance matrices with SPECTER/JAX; (5) the Cross-Section Mover's Distance (XMD), an unbinned optimal-transport measure of the bias introduced by reweighting; and (6) plotting notebooks for the Z+jets and t&#x304;t studies in the paper. A synthetic-data example (<code>scripts/examples/run_toy_example.sh</code>) exercises the full chain in a few seconds without access to the original samples.</p><p>Supported by the U.S. Department of Energy, Office of Science, Office of High Energy Physics under Award Number DE-SC0026285, and by the National Science Foundation under Cooperative Agreement PHY-2019786 (The NSF AI Institute for Artificial Intelligence and Fundamental Interactions). Early work was supported by a seed grant from the Brown University Data Science Institute.</p>",
   "creators": [
     {
       "name": "Doherty, Regan"
@@ -40,6 +40,11 @@
       "identifier": "arXiv:2607.08723",
       "relation": "isSupplementTo",
       "scheme": "arxiv"
+    },
+    {
+      "identifier": "https://github.com/leblanc-lab/ot-cres",
+      "relation": "isSupplementTo",
+      "scheme": "url"
     }
   ]
 }

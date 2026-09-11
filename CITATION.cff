@@ -7,6 +7,14 @@ type: software
 version: 1.0.0
 date-released: 2026-09-11
 license: MIT
+doi: 10.5281/zenodo.22711648
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22711648
+    description: Concept DOI (all versions)
+  - type: doi
+    value: 10.5281/zenodo.22711649
+    description: Version DOI (v1.0.0)
 repository-code: https://github.com/leblanc-lab/ot-cres
 abstract: >-
   Cell resampling of negatively weighted Monte Carlo events using

@@ -1,5 +1,9 @@
 # ot-cres: optimal-transport-based cell resampling
 
+[![arXiv](https://img.shields.io/badge/arXiv-2607.08723-b31b1b.svg)](https://arxiv.org/abs/2607.08723)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22711648.svg)](https://doi.org/10.5281/zenodo.22711648)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 With the goal of reducing the fraction of negative weights in generated MC samples, we employ cell-reweighting [1](https://arxiv.org/abs/2109.07851) with an EMD [2](https://arxiv.org/abs/1902.02346) metric.
 
 This repository accompanies the paper
@@ -8,7 +12,32 @@ This repository accompanies the paper
 > *Optimal-Transport-Based Cell Resampling for Negative and Pathological Event Weights*,
 > [arXiv:2607.08723](https://arxiv.org/abs/2607.08723) (2026).
 
-If you use this code, please cite the paper; machine-readable citation metadata is in [CITATION.cff](CITATION.cff). The code is released under the [MIT License](LICENSE).
+The code is released under the [MIT License](LICENSE). Each tagged release is archived on Zenodo; the concept DOI [10.5281/zenodo.22711648](https://doi.org/10.5281/zenodo.22711648) always resolves to the latest version, and [10.5281/zenodo.22711649](https://doi.org/10.5281/zenodo.22711649) is v1.0.0.
+
+## Citing
+
+If you use this code, please cite the paper and, where a software citation is appropriate, the Zenodo record. Machine-readable metadata is in [CITATION.cff](CITATION.cff).
+
+```bibtex
+@article{Doherty:2026otcres,
+  author        = {Doherty, Regan and Hay, Lauren and Jain, Rishabh and LeBlanc, Matt and Marrinan, Julia and Mauceri, Camille and Roloff, Jennifer},
+  title         = {Optimal-Transport-Based Cell Resampling for Negative and Pathological Event Weights},
+  eprint        = {2607.08723},
+  archivePrefix = {arXiv},
+  primaryClass  = {hep-ph},
+  year          = {2026}
+}
+
+@software{otcres_v1.0.0,
+  author    = {Doherty, Regan and Hay, Lauren and Jain, Rishabh and LeBlanc, Matt and Marrinan, Julia and Mauceri, Camille and Roloff, Jennifer},
+  title     = {ot-cres: optimal-transport-based cell resampling for negative event weights},
+  version   = {v1.0.0},
+  publisher = {Zenodo},
+  year      = {2026},
+  doi       = {10.5281/zenodo.22711649},
+  url       = {https://github.com/leblanc-lab/ot-cres}
+}
+```
 
 -------------------------------------
 
