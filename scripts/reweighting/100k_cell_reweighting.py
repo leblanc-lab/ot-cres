@@ -21,7 +21,7 @@ parser.add_argument("--path", type=str, required = True, help = "Output filepath
 parser.add_argument("--max_radius", type = float, required = True, help = "Max radius")
 parser.add_argument("--whattype", type = int, required = True, help = "0 = hard process, 1 = showered, 2 = hadronization")
 parser.add_argument("--beta", type=float, required=False, default=1, help = "Beta value for calculation of EMD; default is 1")
-# parser.add_argument("--niter", type = int, default=100000, help = "Max number of iterations (i.e. events). Must match vptree.")
+parser.add_argument("--nproc", type=int, required=False, default=None, help = "Number of worker processes for vp-tree queries (default: CPUs available to this job)")
 
 args = parser.parse_args()
 beta = args.beta
@@ -113,36 +113,32 @@ whattype = args.whattype
 point_filepath = args.points
 weight_filepath = args.weights
 print("Max radius ", max_radius," beta ", beta)
-if "had" in vptree_filepath or whattype==2:
-    stage_str = "had"
-elif "ps" in vptree_filepath or whattype==1:
-    stage_str = "ps"
-elif "hp" in vptree_filepath or "hs" in vptree_path or whattype==0:
-    stage_str = "hp"
-else:
-    print("inconsistent stage given")
+stage_strs = {0: "hp", 1: "ps", 2: "had"}
+if whattype not in stage_strs:
+    raise ValueError(f"--whattype must be 0 (hard process), 1 (showered) or 2 (hadronization); got {whattype}")
+stage_str = stage_strs[whattype]
 
 #check number of cores
 num_cores = os.cpu_count()
 print(f"Number of CPU cores: {num_cores}")
 
+points = np.load(point_filepath)
+event_weight = np.load(weight_filepath)
+
+if len(event_weight) < len(points):
+    raise ValueError(f"weights file has {len(event_weight)} entries but points file has {len(points)} events")
+if len(event_weight) > len(points):
+    warnings.warn(f"weights file has {len(event_weight)} entries but points file has {len(points)} events; "
+                  f"using only the first {len(points)} weights", UserWarning)
+    event_weight = event_weight[:len(points)]
+
 if whattype == 0:
-    points = np.load(point_filepath)
-    event_weight = np.load(weight_filepath)
-    
+    # drop all-zero padding rows (events with no hard-process particles surviving the cuts)
     mask = np.where(np.all(points == 0, axis=(1, 2)))[0]
     points = np.delete(points, mask, axis = 0)
     event_weight = np.delete(event_weight, mask, axis = 0)
 
-    N = len(event_weight)
-
-    
-    
-else:
-    points = np.load(point_filepath)
-    N = 100000 #number of events
-    event_weight = np.load(weight_filepath)
-    event_weight = event_weight[:N]
+N = len(event_weight)
 neg_events = np.where(event_weight < 0)[0]
 Tree = None
 
@@ -169,7 +165,14 @@ def parallel_query(i, points, R, truth_points):
 
 truth_points = points[:,0,:]
 
-num_processes = 180
+if args.nproc is not None:
+    num_processes = args.nproc
+else:
+    try:
+        num_processes = len(os.sched_getaffinity(0))
+    except AttributeError:
+        num_processes = os.cpu_count()
+print("Using", num_processes, "worker processes")
 print("about to link vptree to weights ")
 
 start_pc = time.perf_counter()
@@ -254,11 +257,16 @@ final_pt = time.process_time() - total_pt
 print("Total time taken: ", final_pc, " (pc) ", final_pt, " (pt)")
 
 
-if "." in str(max_radius):
-    max_radius_str = str(max_radius).replace(".", "p")
-else:
-    max_radius_str = str(max_radius)
+def _num_str(x):
+    s = f"{x:g}"
+    return s.replace(".", "p")
 
-np.save(f'../data/cell_info/cell_radius_{stage_str}_{max_radius_str}gev_b{int(beta)}.npy', cell_radius)
-np.save(f'../data/cell_info/cell_pop_{stage_str}_{max_radius_str}gev_b{int(beta)}.png', cell_pop)
-np.save(f'../data/cell_info/neg_cell_pop_{stage_str}_{max_radius_str}gev_b{int(beta)}.png', neg_cell_pop)
+max_radius_str = _num_str(max_radius)
+beta_str = _num_str(beta)
+
+cell_info_dir = '../data/cell_info'
+os.makedirs(cell_info_dir, exist_ok=True)
+np.save(f'{cell_info_dir}/cell_radius_{stage_str}_{max_radius_str}gev_b{beta_str}.npy', cell_radius)
+np.save(f'{cell_info_dir}/cell_pop_{stage_str}_{max_radius_str}gev_b{beta_str}.npy', cell_pop)
+np.save(f'{cell_info_dir}/neg_cell_pop_{stage_str}_{max_radius_str}gev_b{beta_str}.npy', neg_cell_pop)
+print("Saved cell diagnostics to", cell_info_dir)

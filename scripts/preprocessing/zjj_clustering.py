@@ -13,7 +13,7 @@ print(tree.keys())
 no_lep = False
 
 N = 100000
-particle_y_cut = 4.9
+particle_eta_cut = 4.9
 particle_pt_cut = 0.1
 
 data = tree.arrays(["Particle_energy", "Particle_px","Particle_py", "Particle_pz", "Particle_status", "Particle_mass", "Particle_pid"])
@@ -51,7 +51,7 @@ for i in range(N):
     mass = np.array(data[i]['Particle_mass'][mask]).astype(np.float32)
 
     main_coords[i, 0:temp_len, 0] = np.sqrt(px**2 + py**2)
-    main_coords[i, 0:temp_len, 1] = 0.5 * np.log((E + pz) / (E - pz))
+    main_coords[i, 0:temp_len, 1] = np.arctanh(pz / np.sqrt(px**2 + py**2 + pz**2))
     main_coords[i, 0:temp_len, 2] = np.arctan2(py, px)
     main_coords[i, 0:temp_len, 3] = mass
 
@@ -59,7 +59,7 @@ for i in range(N):
         if main_coords[i, j, 0] < particle_pt_cut:
             main_coords[i, j, :] = [0, 0, 0, 0]
 
-        elif abs(main_coords[i, j, 1]) > particle_y_cut:
+        elif abs(main_coords[i, j, 1]) > particle_eta_cut:
             main_coords[i, j, :] = [0, 0, 0, 0]
 
     if i % 10000 == 0:
@@ -120,7 +120,10 @@ for j in range(N):
     #create n_jets observable
     good_ind = []
     for k in range(len(akt_jets)):
-        if (np.sqrt(akt_jets[k]['px']**2 + akt_jets[k]['py']**2) > jet_pt_cutoff) & (np.abs(np.arctanh(akt_jets[k]['pz'] / akt_jets[k]['E']))<jet_eta_cutoff):
+        jpx, jpy, jpz = akt_jets[k]['px'], akt_jets[k]['py'], akt_jets[k]['pz']
+        jet_pt_k = np.sqrt(jpx**2 + jpy**2)
+        jet_eta_k = np.arctanh(jpz / np.sqrt(jpx**2 + jpy**2 + jpz**2))
+        if (jet_pt_k > jet_pt_cutoff) & (np.abs(jet_eta_k) < jet_eta_cutoff):
             good_ind.append(k)
 
     akt_jets = akt_jets[good_ind]
@@ -136,7 +139,7 @@ print('Completed all clustering! Now starting coordinate transformation!')
 alljets = ak.Array(alljets)
 
 jet_pt = np.sqrt(alljets.px**2 + alljets.py**2)
-jet_eta = np.arctanh(alljets.pz / alljets.E)
+jet_eta = np.arctanh(alljets.pz / np.sqrt(alljets.px**2 + alljets.py**2 + alljets.pz**2))
 jet_phi = np.arctan2(alljets.py, alljets.px)
 
 m2 = (alljets.E*alljets.E) - (alljets.px**2+alljets.py**2+alljets.pz**2)
