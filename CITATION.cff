@@ -2,10 +2,12 @@ cff-version: 1.2.0
 message: >-
   If you use this software, please cite the accompanying paper listed under
   "preferred-citation".
-title: cres-distance
+title: ot-cres
 type: software
+version: 1.0.0
+date-released: 2026-09-11
 license: MIT
-repository-code: https://github.com/leblanc-lab/cres-distance
+repository-code: https://github.com/leblanc-lab/ot-cres
 abstract: >-
   Cell resampling of negatively weighted Monte Carlo events using
   optimal-transport-based distances (Energy Mover's Distance and its spectral
