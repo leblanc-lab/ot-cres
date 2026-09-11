@@ -2,6 +2,14 @@
 
 With the goal of reducing the fraction of negative weights in generated MC samples, we employ cell-reweighting [1](https://arxiv.org/abs/2109.07851) with an EMD [2](https://arxiv.org/abs/1902.02346) metric.
 
+This repository accompanies the paper
+
+> R. Doherty, L. Hay, R. Jain, M. LeBlanc, J. Marrinan, C. Mauceri, J. Roloff,
+> *Optimal-Transport-Based Cell Resampling for Negative and Pathological Event Weights*,
+> [arXiv:2607.08723](https://arxiv.org/abs/2607.08723) (2026).
+
+If you use this code, please cite the paper; machine-readable citation metadata is in [CITATION.cff](CITATION.cff). The code is released under the [MIT License](LICENSE).
+
 -------------------------------------
 
 ## Setup
@@ -9,6 +17,7 @@ With the goal of reducing the fraction of negative weights in generated MC sampl
 A python virtual environment should be created from the provided requirements.txt file like so:
 ```
 python -m venv negweights
+source negweights/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -37,4 +46,4 @@ source negweights/bin/activate
 
 Cell reweighting in theory performs better the more events one has to sample from, and the radius can grow arbitrarily small. However, the computing time for cell resampling grows quadratically with the number of events, so for statistically significant samples, batched jobs are recommended.
 
-An example batch script for reweighting lives [here](https://github.com/laurenhay/cres-distance/blob/main/scripts/reweight_100k.sh).
+An example batch script for reweighting lives at [scripts/reweighting/reweight_100k.sh](scripts/reweighting/reweight_100k.sh).
