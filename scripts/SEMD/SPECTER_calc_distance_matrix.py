@@ -41,7 +41,7 @@ specter = SPECTER(compile = True)
 
 #function to apply cuts to data
 
-def apply_cuts(data, ycut, ptcut, event_num):
+def apply_cuts(data, etacut, ptcut, event_num):
     
     num_particles = len(data[event_num]["Particle_px"])
     
@@ -69,7 +69,7 @@ def apply_cuts(data, ycut, ptcut, event_num):
             removal_idx = np.append(removal_idx, int(i))
             num = num + 1
         
-        elif abs(np.arctanh(four_momenta[i,3]/four_momenta[i,0])) > ycut:
+        elif abs(np.arctanh(four_momenta[i,3]/np.sqrt(four_momenta[i,1]**2 + four_momenta[i,2]**2 + four_momenta[i,3]**2))) > etacut:
             removal_idx = np.append(removal_idx, int(i))
             num = num + 1
             
@@ -97,7 +97,7 @@ def coord_transform(data):
     new_coords = np.zeros((num_particles, 3))
     
     new_coords[:,0] = np.sqrt(data[:,1]**2 + data[:,2]**2)
-    new_coords[:,1] = 1/2*np.log((data[:,0] + data[:,3])/(data[:,0] - data[:,3]))
+    new_coords[:,1] = np.arctanh(data[:,3]/np.sqrt(data[:,1]**2 + data[:,2]**2 + data[:,3]**2))
     new_coords[:,2] = np.arctan2(data[:,2],data[:,1]) 
             
     
@@ -113,7 +113,7 @@ tree = file["Events"]
 
 #define cut parameters
 
-particle_y_cut = 4.9
+particle_eta_cut = 4.9
 particle_pt_cut = 0.1
 
 N = args.N  #number of events to analyze
@@ -128,7 +128,7 @@ data = data[0:N]
 maximum = 0
 
 for i in range(N):
-    four_mom = apply_cuts(data, particle_y_cut, particle_pt_cut, i)[0]
+    four_mom = apply_cuts(data, particle_eta_cut, particle_pt_cut, i)[0]
     if len(four_mom[:, 0]) > maximum:
         maximum = len(four_mom[:,0])    
         
@@ -146,7 +146,7 @@ main_daughter2 = np.zeros((N, maximum)) #array of daughter 2s for all particles 
 #do cuts and coordinate transformation
 
 for i in range(N):    
-    temp0, temp1, temp2, temp3, temp4, nan1, nan2 = apply_cuts(data, particle_y_cut, particle_pt_cut, i)
+    temp0, temp1, temp2, temp3, temp4, nan1, nan2 = apply_cuts(data, particle_eta_cut, particle_pt_cut, i)
     main_coords[i,0:len(temp0),:] = coord_transform(temp0)
     
     p_stat[i,0:len(temp0)] = temp1
@@ -305,8 +305,10 @@ if ".hepmc" in args.weight_filepath:
 
     weight = 1.455 * 10**4
     event_weight = xsec * weight
-if ".npy" in args.weight_filepath:
+elif ".npy" in args.weight_filepath:
     event_weight = np.load(args.weight_filepath)*1.455 * 10**4
+else:
+    raise ValueError(f"--weight_filepath must be a .hepmc or .npy file, got {args.weight_filepath}")
 event_weight = event_weight[:N]
 neg_events = np.where(event_weight < 0)[0]
 mask = np.ones(N, dtype=bool)
@@ -376,5 +378,5 @@ if args.hadronization:
     print(f'Starting hadronization distance matrix calculation...')
     hadronization_dist2neg = calc_emds(hadronization_SEMD_data,neg_events,1000)
 
-    np.savetxt('SPECTER_hadronization_dist2neg.npy', hadronization_dist2neg, delimiter=',')
+    np.save('SPECTER_hadronization_dist2neg.npy', hadronization_dist2neg)
     print(f'Hadronization distance matrix computed and saved')

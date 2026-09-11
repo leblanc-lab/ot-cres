@@ -11,7 +11,6 @@ from matplotlib.colors import LinearSegmentedColormap as lsc
 from scipy.optimize import curve_fit
 import awkward as ak
 
-hep.style.ROOT
 
 def clean_filename(s):
     s = s.replace('$', '')                # keep content, drop delimiters
@@ -332,7 +331,7 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
         axis_o = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
         axis_rw = hist.axis.Regular(nbins,xmin, xmax,name="data",label="orig",)
     if sel is None:
-        sel  = np.ones_like(weights_orig, dtype=bool)
+        sel  = np.ones_like(orig_weights, dtype=bool)
     fig, (ax, rax) = plt.subplots(nrows=2,
                         ncols=1,
                         figsize=(8,8),
@@ -341,7 +340,7 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
     h_orig = hist.Hist(
         axis_o,
         storage=hist.storage.Weight(), )
-    h_orig.fill(obs, weight = weights_orig[sel])
+    h_orig.fill(obs, weight = orig_weights[sel])
     h_orig = h_orig/h_orig.sum(flow=False).value
     hep.histplot(h_orig, ax=ax, label = "Original", color='black')
 

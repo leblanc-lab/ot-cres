@@ -43,16 +43,20 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Compute XMD distances for a set of reweights.")
 
     # Input files
+    # Generic inputs: give --weights_orig and --distmatrix plus either --reweights,
+    # or --radii together with --reweight_prefix/--reweight_suffix.
     parser.add_argument("--weights_orig", required=False, help="Path to original weights (.npy)",)
-    parser.add_argument("--distmatrix", required=False, help="Path to distance matrix (.npy)", )
+    parser.add_argument("--distmatrix", required=False, help="Path to distance matrix (.npy), shape (N_neg, N) or (N, N)", )
     parser.add_argument("--radii", type=float, nargs="+", required=False, 
-                        help="List of radii (space separated)", )
-    parser.add_argument("--ttbar", action='store_true', help="Use ttbar files and reweights")
-    parser.add_argument("--jeppe", action='store_true', help="Use jeppe files and reweights")
-    parser.add_argument("--test", action='store_true', help="Use only 10k files")
-    # parser.add_argument("--reweights", help="Path to stacked reweights .npy")
-    # parser.add_argument("--reweight_prefix", help="Prefix for per-radius files")
-    # parser.add_argument("--reweight_suffix", default="gev_bigR.npy")
+                        help="List of radii (space separated); one per row of the reweights", )
+    parser.add_argument("--reweights", required=False, help="Path to stacked reweights .npy, shape (N_radii, N_events)")
+    parser.add_argument("--reweight_prefix", required=False, help="Prefix for per-radius reweight files: <prefix><radius><suffix>")
+    parser.add_argument("--reweight_suffix", default="gev_bigR.npy", help="Suffix for per-radius reweight files")
+    parser.add_argument("--points", required=False, help="Optional points .npy used to re-expand reweights that dropped all-zero events")
+    # Presets with hardcoded paths (Oscar cluster only)
+    parser.add_argument("--ttbar", action='store_true', help="Preset: use ttbar files and reweights")
+    parser.add_argument("--jeppe", action='store_true', help="Preset: use Andersen et al. ('jeppe') reweights")
+    parser.add_argument("--test", action='store_true', help="Preset: use only 10k files")
     parser.add_argument("--stage", type=int, default=2, 
                         help="Stage of generation to evaluate: 0 - hard process, 1 - parton shower, 2 - hadronization (default)", )
     # Output
@@ -244,11 +248,28 @@ class XMDComputer:
 def main():
     args = parse_args()
 
-    ##### load hadronization points
-    ### test w/ 10k
+    radii = None
+    reweights = None
 
-    if args.ttbar:
-        points = np.load('/oscar/data/mleblan6/lhay/ttbar_100k/hadronization_ttbar_points.npy')
+    if args.weights_orig or args.distmatrix:
+        #### generic mode: everything comes from the command line
+        if not (args.weights_orig and args.distmatrix):
+            raise SystemExit("--weights_orig and --distmatrix must be given together")
+        weights_orig = np.load(args.weights_orig)
+        distmatrix = np.load(args.distmatrix)
+        points = np.load(args.points) if args.points else None
+        if args.radii is None:
+            raise SystemExit("--radii is required in generic mode")
+        radii = list(args.radii)
+        if args.reweights:
+            reweights = np.load(args.reweights)
+        elif args.reweight_prefix:
+            reweights = load_reweights_from_template(radii, args.reweight_prefix, args.reweight_suffix,
+                                                     weights_orig=weights_orig, points=points)
+        else:
+            raise SystemExit("give either --reweights or --reweight_prefix (with --radii)")
+
+    elif args.ttbar:
         distmatrix = np.load("/oscar/data/mleblan6/lhay/ttbar_distmatrix/full_distmatrix_ttbar.npy")
         weights_orig = np.load("/oscar/data/mleblan6/lhay/ttbar_100k/ttbar_weight_100k.npy")
         if args.stage == 0:
@@ -268,14 +289,13 @@ def main():
             df = make_df(radii, weights_orig, "/oscar/data/mleblan6/lhay/reweighted_files/ttbar_had_100k/100k_had_emd_reweight_", "gev_ttbar.npy")
             reweights = np.stack(df["weights"].to_numpy()/(1.455 * 10**4))
     elif args.test:
-        points = np.load("/users/lhay/NegativeWeights/hadronization_ttbar_points10k.npy")
         distmatrix = np.load("/users/lhay/NegativeWeights/distmatrix_ttbar10k.npy")
         weights_orig = np.load("/users/lhay/NegativeWeights/ttbar_weight_10k.npy")
         radii = [1, 15, 18, 24, 25, 30, 50, 100]
         df = make_df(radii, weights_orig, "/oscar/data/mleblan6/lhay/reweighted_files/10k_ttbar_ps/10k_ps_emd_reweight_", "gev_ttbar.npy")
         reweights = np.stack(df["weights"].to_numpy()/(1.455 * 10**4))
     else:
-        points = np.load('/oscar/data/mleblan6/rjain/ppzjj_100k/hadronization_points.npy')
+        #### Z+jets preset: only the ground metric is fixed here; reweights come from --jeppe
         weights_orig = np.load('/oscar/data/mleblan6/rjain/ppzjj_100k/weight_100k.npy')
         distmatrix = np.load('/oscar/data/mleblan6/rjain/xmd_groundmetrics/had_100k_distmatrix/full_distmatrix.npy')
 
@@ -294,7 +314,11 @@ def main():
     elif args.jeppe==True and args.ttbar==False:
         radii = np.logspace(np.log10(50),np.log10(500),50)
         reweights = np.load("/oscar/data/mleblan6/rjain/jeppe/jeppe_reweights.npy")
-        
+
+    if radii is None or reweights is None:
+        raise SystemExit("No reweights selected: use the generic --weights_orig/--distmatrix/--radii/--reweights "
+                         "arguments, or one of the presets (--ttbar [--stage], --test, --jeppe)")
+
     computer.compute_and_save(
         radii=radii,
         reweights=reweights,
