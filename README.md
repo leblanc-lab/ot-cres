@@ -1,4 +1,4 @@
-# Cell Reweighting Project
+# ot-cres: optimal-transport-based cell resampling
 
 With the goal of reducing the fraction of negative weights in generated MC samples, we employ cell-reweighting [1](https://arxiv.org/abs/2109.07851) with an EMD [2](https://arxiv.org/abs/1902.02346) metric.
 
