@@ -1,16 +1,30 @@
 {
   "title": "ot-cres: optimal-transport-based cell resampling for negative event weights",
-  "description": "<p>Code accompanying <em>Optimal-Transport-Based Cell Resampling for Negative and Pathological Event Weights</em> (arXiv:2607.08723). Cell resampling of negatively weighted Monte Carlo events using the Energy Mover's Distance and its spectral variant as the metric, plus the Cross-Section Mover's Distance (XMD) as an unbinned measure of reweighting bias.</p>",
+  "description": "<p>Code accompanying <em>Optimal-Transport-Based Cell Resampling for Negative and Pathological Event Weights</em> (arXiv:2607.08723). Cell resampling of negatively weighted Monte Carlo events using the Energy Mover's Distance and its spectral variant as the metric, plus the Cross-Section Mover's Distance (XMD) as an unbinned measure of reweighting bias. Supported by the U.S. Department of Energy, Office of Science, Office of High Energy Physics under Award Number DE-SC0026285, and by the National Science Foundation under Cooperative Agreement PHY-2019786 (IAIFI).</p>",
   "creators": [
-    {"name": "Doherty, Regan"},
-    {"name": "Hay, Lauren"},
-    {"name": "Jain, Rishabh"},
-    {"name": "LeBlanc, Matt"},
-    {"name": "Marrinan, Julia"},
-    {"name": "Mauceri, Camille"},
-    {"name": "Roloff, Jennifer"}
+    {
+      "name": "Doherty, Regan"
+    },
+    {
+      "name": "Hay, Lauren"
+    },
+    {
+      "name": "Jain, Rishabh"
+    },
+    {
+      "name": "LeBlanc, Matt"
+    },
+    {
+      "name": "Marrinan, Julia"
+    },
+    {
+      "name": "Mauceri, Camille"
+    },
+    {
+      "name": "Roloff, Jennifer"
+    }
   ],
-  "license": "MIT",
+  "license": "mit",
   "upload_type": "software",
   "access_right": "open",
   "keywords": [
@@ -22,10 +36,10 @@
     "high energy physics"
   ],
   "related_identifiers": [
-    {"identifier": "arXiv:2607.08723", "relation": "isSupplementTo", "scheme": "arxiv"}
-  ],
-  "grants": [
-    {"id": "10.13039/100000015::DE-SC0026285"},
-    {"id": "10.13039/100000001::PHY-2019786"}
+    {
+      "identifier": "arXiv:2607.08723",
+      "relation": "isSupplementTo",
+      "scheme": "arxiv"
+    }
   ]
 }
