@@ -38,12 +38,11 @@ python3 100k_cell_reweighting.py \
 
 - `--whattype` — `0` = hard process, `1` = showered, `2` = hadronization. For `whattype=0` this also drops all-zero padding rows from `points`/`weights`. Otherwise controls the title/filename convention used for the diagnostic plots.
 - `--beta` — EMD beta; `beta <= 1` uses the EMD directly, `beta > 1` uses the energy-difference-corrected form
+- `--nproc` — number of worker processes for the vp-tree queries (default: the CPUs available to the job)
 
-Outputs `<output_weights.npy>` plus `cell_radius_*gev.png` / `cell_pop_*gev.png` in the current directory and `neg_cell_pop_*gev.png` in `../plots/`.
+The number of events is taken from the `points` file; the `weights` file must have at least as many entries (extra trailing entries are ignored with a warning).
 
-### `100k_cell_reweighting_b2.py`
-
-A beta=2 variant with the same CLI arguments as above. Differences: `compute_emds` returns `sqrt(EMD)`, event weights are rescaled by `1.455e4` (to match the 10M-event reference sample), extra progress/debug printing, and the vp-tree neighbor lookup is also saved to `vptree_links_R<radius>_b<beta>.npy` for reuse.
+Outputs `<output_weights.npy>` plus per-cell diagnostics `cell_radius_*.npy`, `cell_pop_*.npy` and `neg_cell_pop_*.npy` in `../data/cell_info/` (created if missing), named by stage, radius and beta (e.g. `neg_cell_pop_had_16p4gev_b1.npy`).
 
 ### `100k_beta0p5_reweighting.py`
 
