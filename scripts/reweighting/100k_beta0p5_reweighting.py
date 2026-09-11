@@ -29,7 +29,7 @@ print('Starting data preprocessing...')
 #parameters of EMD calculation
 max_dist = np.sqrt(9.8**2 + (2*np.pi)**2)
 calc_emds = wasserstein.EMDYPhi(R=max_dist, 
-                                        beta=1,
+                                        beta=0.5,
                                         norm=False,
                                         #num_threads=-1,
                                         #print_every=1000,
@@ -85,25 +85,22 @@ print(f"Number of CPU cores: {num_cores}")
 
 
 if whattype == 0:
-    points = np.load('/oscar/data/mleblan6/ppzjj_100k/hardprocess_points.npy')
-    event_weight = np.load('/oscar/data/mleblan6/ppzjj_100k/weight_100k.npy') * 1.455 * 10**4
-
+    points = np.load('/users/jsmarrin/100k_sample/hardprocess_points.npy')
+    event_weight = np.load('/users/jsmarrin/100k_sample/weight_100k.npy') * 1.455 * 10**4
     mask = np.where(np.all(points == 0, axis=(1, 2)))[0]
     points = np.delete(points, mask, axis = 0)
     event_weight = np.delete(event_weight, mask, axis = 0)
-
     N = len(event_weight)
-    
-elif whattype == 1: 
-    points = np.load('/oscar/data/mleblan6/ppzjj_100k/showered_points.npy')
-    N = 100000 #number of events
-    event_weight = np.load('/oscar/data/mleblan6/ppzjj_100k/weight_100k.npy') * 1.455 * 10**4
-    
-elif whattype == 2:
-    points = np.load('/oscar/data/mleblan6/ppzjj_100k/hadronization_points.npy')
-    N = 100000 #number of events
-    event_weight = np.load('/oscar/data/mleblan6/ppzjj_100k/weight_100k.npy') * 1.455 * 10**4
 
+elif whattype == 1:
+    points = np.load('/users/jsmarrin/100k_sample/showered_points.npy')
+    N = 100000 #number of events
+    event_weight = np.load('/users/jsmarrin/100k_sample/weight_100k.npy') * 1.455 * 10**4
+
+elif whattype == 2:
+    points = np.load('/users/jsmarrin/100k_sample/hadronization_points.npy')
+    N = 100000 #number of events
+    event_weight = np.load('/users/jsmarrin/100k_sample/weight_100k.npy') * 1.455 * 10**4
 
 neg_events = np.where(event_weight < 0)[0]
 
@@ -204,13 +201,13 @@ plt.yscale('log')
 plt.xlabel('Radius [GeV]')
 plt.ylabel('Frequency');
 if whattype == 2:
-	plt.title('Hadronization Reweight Cell Radius')
+    plt.title('Hadronization Reweight Cell Radius')
     plt.savefig(f'cell_radius_had_{int(max_radius)}gev.png')
 elif whattype == 1:
-	plt.title('Showered Reweight Cell Radius')
+    plt.title('Showered Reweight Cell Radius')
     plt.savefig(f'cell_radius_sho_{int(max_radius)}gev.png')
 elif whattype == 0:
-	plt.title('Hard Process Cell Radius')
+    plt.title('Hard Process Cell Radius')
     plt.savefig(f'cell_radius_hp_{int(max_radius)}gev.png')
 
 
