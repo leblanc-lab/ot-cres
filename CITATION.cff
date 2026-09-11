@@ -1,0 +1,63 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite the accompanying paper listed under
+  "preferred-citation".
+title: cres-distance
+type: software
+license: MIT
+repository-code: https://github.com/leblanc-lab/cres-distance
+abstract: >-
+  Cell resampling of negatively weighted Monte Carlo events using
+  optimal-transport-based distances (Energy Mover's Distance and its spectral
+  variant), plus the Cross-Section Mover's Distance (XMD) as an unbinned
+  measure of reweighting bias.
+keywords:
+  - negative weights
+  - cell resampling
+  - energy mover's distance
+  - optimal transport
+  - Monte Carlo event generation
+authors:
+  - given-names: Regan
+    family-names: Doherty
+  - given-names: Lauren
+    family-names: Hay
+  - given-names: Rishabh
+    family-names: Jain
+  - given-names: Matt
+    family-names: LeBlanc
+  - given-names: Julia
+    family-names: Marrinan
+  - given-names: Camille
+    family-names: Mauceri
+  - given-names: Jennifer
+    family-names: Roloff
+preferred-citation:
+  type: article
+  title: >-
+    Optimal-Transport-Based Cell Resampling for Negative and Pathological
+    Event Weights
+  authors:
+    - given-names: Regan
+      family-names: Doherty
+    - given-names: Lauren
+      family-names: Hay
+    - given-names: Rishabh
+      family-names: Jain
+    - given-names: Matt
+      family-names: LeBlanc
+    - given-names: Julia
+      family-names: Marrinan
+    - given-names: Camille
+      family-names: Mauceri
+    - given-names: Jennifer
+      family-names: Roloff
+  year: 2026
+  month: 7
+  doi: 10.48550/arXiv.2607.08723
+  url: https://arxiv.org/abs/2607.08723
+  identifiers:
+    - type: other
+      value: arXiv:2607.08723
+      description: arXiv preprint (hep-ph)
+  notes: 33 pages, 17 figures. Preliminary version.
