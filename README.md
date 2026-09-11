@@ -10,10 +10,6 @@ This repository accompanies the paper
 
 If you use this code, please cite the paper; machine-readable citation metadata is in [CITATION.cff](CITATION.cff). The code is released under the [MIT License](LICENSE).
 
-## Funding
-
-This material is based on work supported by the U.S. Department of Energy, Office of Science, Office of High Energy Physics under Award Number DE-SC0026285. This work is supported by the National Science Foundation under Cooperative Agreement PHY-2019786 (The NSF AI Institute for Artificial Intelligence & Fundamental Interactions, http://iaifi.org/). We are grateful for the support this work obtained in its early stages in the form of a seed grant from the Brown University Data Science Institute.
-
 -------------------------------------
 
 ## Setup
@@ -51,3 +47,7 @@ source negweights/bin/activate
 Cell reweighting in theory performs better the more events one has to sample from, and the radius can grow arbitrarily small. However, the computing time for cell resampling grows quadratically with the number of events, so for statistically significant samples, batched jobs are recommended.
 
 An example batch script for reweighting lives at [scripts/reweighting/reweight_100k.sh](scripts/reweighting/reweight_100k.sh).
+
+## Funding
+
+This material is based on work supported by the U.S. Department of Energy, Office of Science, Office of High Energy Physics under Award Number DE-SC0026285. This work is supported by the National Science Foundation under Cooperative Agreement PHY-2019786 (The NSF AI Institute for Artificial Intelligence & Fundamental Interactions, http://iaifi.org/). We are grateful for the support this work obtained in its early stages in the form of a seed grant from the Brown University Data Science Institute.
