@@ -18,4 +18,4 @@ ARGS=(37 38)
 source /users/lhay/negweights/bin/activate
 
 #Run python script
-python3 -u 100k_cell_reweighting.py --max_radius=${ARG[SLURM_ARRAY_TASK_ID]} --path="100k_ps_emd_reweight_${ARG_STR[SLURM_ARRAY_TASK_ID]}gev_ttbar.npy" --vptree='/users/lhay/cres-distance/data/vptree_pkls/100k_ps_ttbar_vptree.pkl' --points="/oscar/data/mleblan6/lhay/ttbar_100k/showered_ttbar_points.npy" --weights="/oscar/data/mleblan6/lhay/ttbar_100k/ttbar_weight_100k.npy" --whattype=1
+python3 -u 100k_cell_reweighting.py --max_radius=${ARGS[SLURM_ARRAY_TASK_ID]} --path="100k_ps_emd_reweight_${ARG_STR[SLURM_ARRAY_TASK_ID]}gev_ttbar.npy" --vptree='/users/lhay/cres-distance/data/vptree_pkls/100k_ps_ttbar_vptree.pkl' --points="/oscar/data/mleblan6/lhay/ttbar_100k/showered_ttbar_points.npy" --weights="/oscar/data/mleblan6/lhay/ttbar_100k/ttbar_weight_100k.npy" --whattype=1
