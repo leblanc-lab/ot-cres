@@ -12,4 +12,8 @@
 source /users/lhay/negweights/bin/activate
 
 #Run python script
-python3 -u /users/lhay/cres-distance/scripts/brute_force_rw.py
+python3 -u /users/lhay/cres-distance/scripts/reweighting/brute_force_rw.py \
+    --matrix=/oscar/data/mleblan6/cell_resampling/jeppe_100k_matrix_clustered.h5 \
+    --weights=/oscar/data/mleblan6/rjain/ppzjj_100k/weight_100k.npy \
+    --logspace 10 1000 50 \
+    --output=/oscar/data/mleblan6/cell_resampling/jeppe_reweights.npy

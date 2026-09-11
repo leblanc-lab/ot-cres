@@ -318,8 +318,11 @@ if args.showered:
     mask[zero_sh_array] = False
 if args.hadronization:
     mask[zero_had_array] = False
+
+# negative events that were themselves removed by the cuts no longer exist in the compacted arrays;
+# drop them first, then map the surviving original indices onto the compacted indices
+neg_events = neg_events[mask[neg_events]]
 neg_events = np.where(mask)[0].searchsorted(neg_events)
-neg_events = neg_events[neg_events < N]
 #-------------------------------------------------------------------------------------------------------------------------------------
 def calc_emds(data, neg_events, batch_size):
     neg_idx = np.array(neg_events)

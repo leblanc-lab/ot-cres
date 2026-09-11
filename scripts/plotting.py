@@ -340,7 +340,7 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
     h_orig = hist.Hist(
         axis_o,
         storage=hist.storage.Weight(), )
-    h_orig.fill(obs, weight = orig_weights[sel])
+    h_orig.fill(obs0, weight = orig_weights[sel])
     h_orig = h_orig/h_orig.sum(flow=False).value
     hep.histplot(h_orig, ax=ax, label = "Original", color='black')
 
@@ -355,7 +355,7 @@ def plot_diff_samples(obs0, obs1, dfs, strings, orig_weights, xmin, xmax, nbins,
             axis_rw,
             storage=hist.storage.Weight(), 
         )
-        h.fill(obs, weight = weights)
+        h.fill(obs1, weight = weights)
         #### Normalize hists
         h = h/h.sum(flow=False).value
         bin_edges = h.axes[0].edges

@@ -66,10 +66,48 @@ These submit `100k_cell_reweighting.py` as a SLURM array job, scanning a list of
 
 ## 3. Brute-force reweighting (no vp-tree)
 
-`brute_force_rw.py` performs the same `cell_reweight` procedure but from a precomputed full distance matrix instead of a vp-tree — useful when the M x N distance matrix between negative and all events is small enough to precompute directly. It loads a `.h5` distance matrix and `weight_100k.npy`, symmetrizes the matrix, scans `radii = np.logspace(1, 3, 50)`, and saves the reweighted-weight arrays and radii to disk. Paths are currently hardcoded for the "Jeppe" 100k sample — edit them for other datasets. Submit via [brute_force_rw.sh](brute_force_rw.sh).
+`brute_force_rw.py` performs the same `cell_reweight` procedure but from a precomputed full N x N distance matrix instead of a vp-tree — useful when the matrix is small enough to precompute directly (see `XMD/compute_distmatrix.py`). It accepts an `.h5` (upper-triangular is fine, it is symmetrized) or `.npy` matrix:
+
+```
+python3 brute_force_rw.py --matrix=<distmatrix.h5|.npy> --weights=<weights.npy> --output=<reweights.npy> \
+    (--radius R | --radii R1 R2 ... | --logspace MIN MAX N) [--dataset distance_matrix] [--weight-tol 0.01] [--max-events N]
+```
+
+It saves a stacked `(N_radii, N_events)` array of reweighted weights plus `<output>_radii.txt`. `--weight-tol` is the cell-sum threshold at which the cell stops growing (default `0.01`; the vp-tree script uses `1e-5`, so set it to `1e-5` to reproduce that script exactly). Submit via [brute_force_rw.sh](brute_force_rw.sh).
 
 -------------------------------------
 
-## 4. Plotting
+## 4. Distance matrices and XMD
+
+`XMD/compute_distmatrix.py` computes the full EMD (beta=1) matrix between a block of events and the whole sample, one row per event, in parallel:
+
+```
+python3 XMD/compute_distmatrix.py --points=<points.npy> --output=<out.npy> [--index=K --chunk=10000] [--nproc=N]
+```
+
+`XMD/xmd_calc.py` then computes the Cross-Section Mover's Distance between the original and each reweighted sample:
+
+```
+python3 XMD/xmd_calc.py --weights_orig=<weights.npy> --distmatrix=<distmatrix.npy> --radii R1 R2 ... \
+    (--reweights <stacked.npy> | --reweight_prefix <prefix> [--reweight_suffix gev_bigR.npy]) --output=<xmd.npy>
+```
+
+The `--ttbar`, `--test` and `--jeppe` flags select presets with paths hardcoded for the Oscar cluster.
+
+-------------------------------------
+
+## 5. End-to-end example
+
+`examples/run_toy_example.sh` generates a small synthetic sample (`examples/make_toy_data.py`), builds a vp-tree, reweights at two radii, computes the full distance matrix, repeats the reweighting by brute force, and computes the XMD. It runs in a few seconds on a laptop and exercises every script above:
+
+```
+bash scripts/examples/run_toy_example.sh        # NEVENTS=500 NPROC=4 by default
+```
+
+Outputs go to `data/toy_example/`, `data/vptree_pkls/` and `data/cell_info/` (all git-ignored).
+
+-------------------------------------
+
+## 6. Plotting
 
 `plotting.py` is a module of plotting helper functions (`plot_same_rw_all`, `plot_diff_rw`, `plot_diff_samples`) that compare observable distributions before and after reweighting, saving figures to `../plots/<channel>/`. It's imported by the notebooks in [../notebooks/](../notebooks/) rather than run directly.

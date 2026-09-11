@@ -142,10 +142,7 @@ class XMDComputer:
         """
         if self.const is not None:
             return self.const
-        print("orig weights min ", min(self.original_weights))
-        print(reweights)
-        rw_min = np.min(reweights)
-        print("rw min ", rw_min)
+        print("orig weights min ", min(self.original_weights), " reweights min ", np.min(reweights))
         
         global_min = min(self.original_weights)
 
@@ -202,7 +199,7 @@ class XMDComputer:
     
         print(f'Sparse distance matrix has shape: {np.shape(pos_distmatrix)}')
     
-        xmd = ot.emd2( w1_pos/w1_pos.sum(), w2_pos/w2_pos.sum(), pos_distmatrix, numItermax = self.num_iter_max, numThreads = self.num_threads)
+        xmd = ot.emd2( w1_pos/w1_pos.sum(), w2_pos/w2_pos.sum(), pos_distmatrix, numItermax = self.num_iter_max)
     #    pos_xmd = ot.sinkhorn2(w1_pos/w1_pos.sum(), w2_pos/w2_pos.sum(), pos_distmatrix/biggest_emd, reg = 1e-1, warn = True)
         xmd *= min(w1_pos.sum(), w2_pos.sum())
     
@@ -223,7 +220,6 @@ class XMDComputer:
                 f"radii and reweights length mismatch: "
                 f"{len(radii)} vs {len(reweights)}."
             )
-        print(np.array(reweights))
         const = self._get_constant(np.array(reweights))
         print(f"Using constant shift: {const}")
 

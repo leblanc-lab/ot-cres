@@ -1,13 +1,12 @@
 #import useful stuff
 import pickle 
 import numpy as np
-import uproot
 import wasserstein
 import os
 import argparse
 import vptree
 
-#check number of cores and compile specter
+#check number of cores
 num_cores = os.cpu_count()
 print(f"Number of CPU cores: {num_cores}")
 

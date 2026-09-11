@@ -26,6 +26,16 @@ When returning to the virtual environment, before running any of the python scri
 source negweights/bin/activate
 ```
 
+The scripts and notebooks were developed on Linux (Brown's Oscar cluster). On macOS the `wasserstein` wheel needs the OpenMP runtime (`brew install libomp`).
+
+## Quick start
+
+To check the installation and see the whole workflow on a small synthetic sample (a few seconds on a laptop):
+```
+bash scripts/examples/run_toy_example.sh
+```
+This generates toy events, builds a vp-tree, performs the cell reweighting at two radii, computes the full EMD distance matrix, repeats the reweighting by brute force, and evaluates the XMD. `notebooks/Intro.ipynb` walks through the same steps.
+
 -------------------------------------
 
 ## Repository Structure
